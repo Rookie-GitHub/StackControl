@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StackControl", "StackControl\StackControl.csproj", "{3DD8644B-79D5-4EEF-8EC2-8FFF345CE9AA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DTO", "DTO\DTO.csproj", "{F1F0EE3D-95FA-4134-B6DC-02D79AD2C6DC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Untillity", "Untillity\Untillity.csproj", "{DC33FA14-0596-405C-A6E3-A4EB7D36D39E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,8 +19,19 @@ Global
 		{3DD8644B-79D5-4EEF-8EC2-8FFF345CE9AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3DD8644B-79D5-4EEF-8EC2-8FFF345CE9AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3DD8644B-79D5-4EEF-8EC2-8FFF345CE9AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1F0EE3D-95FA-4134-B6DC-02D79AD2C6DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1F0EE3D-95FA-4134-B6DC-02D79AD2C6DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1F0EE3D-95FA-4134-B6DC-02D79AD2C6DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1F0EE3D-95FA-4134-B6DC-02D79AD2C6DC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC33FA14-0596-405C-A6E3-A4EB7D36D39E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC33FA14-0596-405C-A6E3-A4EB7D36D39E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC33FA14-0596-405C-A6E3-A4EB7D36D39E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC33FA14-0596-405C-A6E3-A4EB7D36D39E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F849B857-B284-4D53-B2C3-408FC917E0BF}
 	EndGlobalSection
 EndGlobal

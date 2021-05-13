@@ -1,4 +1,5 @@
-﻿using SerialCom.SerialLogic;
+﻿using DTO.EDM;
+using SerialCom.SerialLogic;
 using StackControl.basic;
 using StackControl.Models;
 using System;
@@ -16,6 +17,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using TwinCAT.Ads;
+using Untillity;
 
 namespace StackControl
 {
@@ -198,19 +200,34 @@ namespace StackControl
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            //view("062210511001020-A_1");
+            //string s = "062210511001020-A_1";
+            //using (EDM Db = new EDM())
+            //{
+            //    ScanQrCodeRecord model = new ScanQrCodeRecord()
+            //    {
+            //        StackId = s,
+            //        Status = (int)ScanQRCodeStatus.扫描完成,
+            //        ScanTime = DateTime.Now
+            //    };
+
+            //    Db.ScanQrCodeRecord.Add(model);
+            //    Db.SaveChanges();
+            //}
+            //Analysis(s);
             this.alarm.ItemsSource = Alarmlist;
             CurrentBatch = config.AppSettings.Settings["CurrentBatchID"].Value;
-            showTime();
-            ScanQRCode();
-            FirstConfigPLC();
-            PickBoardTimer();
-            PickBoardFinishTimer();
+            //showTime();
+            //ScanQRCode();
+            //FirstConfigPLC();
+            //PickBoardTimer();
+            //PickBoardFinishTimer();
         }
 
         #endregion
 
         #region PLC
-        
+
         #region ConnPLC
         public void ConnPLC()
         {
@@ -398,7 +415,6 @@ namespace StackControl
                 ConnPLC();
                 ConfigPLCTags();
                 HeatBeatPLC();
-
             }
             catch (Exception)
             {
@@ -425,47 +441,14 @@ namespace StackControl
                 {
                     if (binRead.ReadBoolean())
                     {
-                        if (basic.SqlHelper.CheckStackInfo(StackId))
-                        {
-                            tcClient.WriteAny(LeftLoadRel, true);
-
-                            //发送完成修改状态
-                            basic.SqlHelper.UpdateAbout(1);
-                            Thread.Sleep(50);
-                            tcClient.WriteAny(LeftLoadReq, false);
-                        }
-                        else
-                            Console.WriteLine("--CheckStackInfo err!");
-                        App.Current.Dispatcher.Invoke(() =>
-                        {
-                            Alarmlist.Add(new Alarm() { Message = "--CheckStackInfo err!", Timestamp = DateTime.Now });
-
-                        });
-
+                        Req_PutOnThePlates((int)PlatesChannel.左侧);
                     }
-
                 }
                 else if (e.NotificationHandle == RightLoadInt)
                 {
                     if (binRead.ReadBoolean())
                     {
-                        if (basic.SqlHelper.CheckStackInfo(StackId))
-                        {
-                            tcClient.WriteAny(RightLoadRel, true);
-
-                            //发送完成修改状态
-                            basic.SqlHelper.UpdateAbout(2);
-                            Thread.Sleep(50);
-                            tcClient.WriteAny(RightLoadReq, false);
-                        }
-                        else
-                            Console.WriteLine("--CheckStackInfo err!");
-                        App.Current.Dispatcher.Invoke(() =>
-                        {
-                            Alarmlist.Add(new Alarm() { Message = "--CheckStackInfo err!", Timestamp = DateTime.Now });
-
-                        });
-
+                        Req_PutOnThePlates((int)PlatesChannel.右侧);
                     }
                 }
                 #endregion
@@ -475,39 +458,45 @@ namespace StackControl
                 {
                     if (binRead.ReadBoolean())
                     {
-                        //2021年5月6日13:37:40
-                        (string StackId, string BatchId) = SqlHelper.update_StackStatus(1);
-                        if (!string.IsNullOrWhiteSpace(StackId) && !string.IsNullOrWhiteSpace(BatchId))
-                        {
-                            tcClient.WriteAny(LeftPartInWork, false);
-                            //更新堆垛使用情况
-                            view(StackId);
-                            //更新堆垛id
-                            st1.Text = StackId;
-                            //更新批次id
-                            st3.Text = BatchId;
-                            //更新进料状态
-                            st5.Fill = new SolidColorBrush(Colors.Red);
-                        }
+                        EnterThePickPlateArea((int)PlatesChannel.左侧);
+                        #region 原代码 注释掉
+                        //(string StackId, string BatchId) = SqlHelper.update_StackStatus((int)PlatesChannel.左侧);
+                        //if (!string.IsNullOrWhiteSpace(StackId) && !string.IsNullOrWhiteSpace(BatchId))
+                        //{
+                        //    tcClient.WriteAny(LeftPartInWork, false);
+                        //    //更新堆垛使用情况
+                        //    view(StackId);
+                        //    //更新堆垛id
+                        //    st1.Text = StackId;
+                        //    //更新批次id
+                        //    st3.Text = BatchId;
+                        //    //更新进料状态
+                        //    st5.Fill = new SolidColorBrush(Colors.Yellow);
+                        //}
+                        #endregion
                     }
                 }
                 else if (e.NotificationHandle == RightPart_InWorkInt)
                 {
                     if (binRead.ReadBoolean())
                     {
-                        (string StackId, string BatchId) = SqlHelper.update_StackStatus(2);
-                        if (!string.IsNullOrWhiteSpace(StackId) && !string.IsNullOrWhiteSpace(BatchId))
-                        {
-                            tcClient.WriteAny(LeftPartInWork, false);
-                            //更新堆垛使用情况
-                            view(StackId);
-                            //更新堆垛id
-                            st2.Text = StackId;
-                            //更新批次id
-                            st4.Text = BatchId;
-                            //更新进料状态
-                            st6.Fill = new SolidColorBrush(Colors.Red);
-                        }
+                        EnterThePickPlateArea((int)PlatesChannel.右侧);
+
+                        #region 原代码 注释掉
+                        //(string StackId, string BatchId) = SqlHelper.update_StackStatus(2);
+                        //if (!string.IsNullOrWhiteSpace(StackId) && !string.IsNullOrWhiteSpace(BatchId))
+                        //{
+                        //    tcClient.WriteAny(LeftPartInWork, false);
+                        //    //更新堆垛使用情况
+                        //    view(StackId);
+                        //    //更新堆垛id
+                        //    st2.Text = StackId;
+                        //    //更新批次id
+                        //    st4.Text = BatchId;
+                        //    //更新进料状态
+                        //    st6.Fill = new SolidColorBrush(Colors.Yellow);
+                        //}
+                        #endregion
                     }
                 }
                 #endregion
@@ -1121,7 +1110,7 @@ namespace StackControl
         #endregion
 
         #region ScanQRCode
-        
+
         #region ScanQRCode Connect
         /// <summary>
         /// ScanQRCode
@@ -1140,14 +1129,35 @@ namespace StackControl
         /// <param name="args"></param>
         private void serialPortHelper_ReceivedDataEvent(object sender, SerialPortHelper.SerialPortRecvEventArgs args)
         {
-            // DataInfo
-            var Recvmessage = (Encoding.Default.GetString(args.RecvData, 0, args.RecvDataLength)).Replace('\r', ' ').Trim();
-            StackId = Recvmessage;
-            Console.WriteLine(Recvmessage);
-            Analysis(Recvmessage);
+            try
+            {
+                var Recvmessage = (Encoding.Default.GetString(args.RecvData, 0, args.RecvDataLength)).Replace('\r', ' ').Trim();
+                StackId = Recvmessage;
+                Console.WriteLine(Recvmessage);
+                /*记录到数据库中，ScanQrCodeRecord status = 1 （扫描完成）*/
+                using (EDM Db = new EDM())
+                {
+                    ScanQrCodeRecord model = new ScanQrCodeRecord()
+                    {
+                        StackId = Recvmessage,
+                        Status = (int)ScanQRCodeStatus.扫描完成,
+                        ScanTime = DateTime.Now
+                    };
+
+                    Db.ScanQrCodeRecord.Add(model);
+                    Db.SaveChanges();
+                }
+                Analysis(Recvmessage);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(" ScanQrCode :" + ex.ToString());
+                //记录日志
+
+            }
         }
         #endregion
-       
+
         #region Analysis Data and Save
         /// <summary>
         /// 解析并存储堆垛/板料信息
@@ -1163,79 +1173,163 @@ namespace StackControl
             string FileNme = scanRes + ".csv";
             string FileNme_Parts = scanRes.Split('_')[0] + "_parts.csv";
             string FileNme_All = scanRes.Split('_')[0] + "_all.csv";
-
-            if (Ping(Getcsv_IP))
+            try
             {
-
-                if (Connect(Getcsv_IP, Use, Pwd))
+                if (Ping(Getcsv_IP))
                 {
-                    try
+                    if (Connect(Getcsv_IP, Use, Pwd))
                     {
                         if (basic.SqlHelper.CheckUnmark())
                         {
                             Console.WriteLine(DateTime.Now + " 扫描失败！上料口存在未标记左右的堆垛，请完成操作后重新扫描。");
+                            MessageBox.Show(" 扫描失败！上料口存在未标记左右的堆垛，请完成操作后重新扫描。");
                             return;
                         }
                         if (basic.SqlHelper.CheckCom(StackId))
                         {
                             Console.WriteLine(DateTime.Now + "已经完成的批次再次上线，请重新确认批次号");
+                            MessageBox.Show(StackId + " 已经完成的批次再次上线，请重新确认批次号");
                             return;
                         }
+
                         //存储堆垛信息
-                        string[] Stack = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme, Encoding.Default);
-                        //BUG 
-                        foreach (var dataRow in Stack)
-                        {
-                            StackModel stackModel = new StackModel
-                            {
-                                StackId = scanRes,
-                                Batch = dataRow.Split(',')[0].Split('_')[0],
-                                PartID = Convert.ToInt32(dataRow.Split(',')[1]),
-                                Len = Convert.ToInt32(dataRow.Split(',')[2]),
-                                Width = Convert.ToInt32(dataRow.Split(',')[3]),
-                                Thin = Convert.ToInt32(dataRow.Split(',')[4]),
-                                Material = dataRow.Split(',')[5],
-                                Pos = Convert.ToInt32(dataRow.Split(',')[6]),
-                                Pattern = Convert.ToInt32(dataRow.Split(',')[7]),
-                                Map = dataRow.Split(',')[8],
-                                Status = 1,
-                                About = 0
-                            };
-                            basic.SqlHelper.Insert_Stack_table(stackModel);
-                        }
-                        File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme);
+                        string[] Stack = File.ReadAllLines(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_1.csv", Encoding.Default);//(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme, Encoding.Default);
 
-                        //存储板料信息
-                        if (File.Exists(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts))
+                        if (Stack.Length <= 0)
                         {
-                            string[] Parts = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts, Encoding.Default);
-                            foreach (var dataRow in Parts)
+                            MessageBox.Show("The infomation of the Stack : " + scanRes + " was Analysis failed,Please check the MDB file!");
+                            return;
+                        }
+
+                        //The Batch of Stack
+                        var BatchOfStack = Stack[0].Split(',')[0].Split('_')[0];
+
+                        using (EDM Db = new EDM())
+                        {
+                            List<Stack_table> Stack_tables = new List<Stack_table>();
+                            Stack_tables.Clear();
+
+                            DateTime dateTime = DateTime.Now;
+
+                            //BUG 
+                            foreach (var dataRow in Stack)
                             {
-                                string BatchId = dataRow.Split(',')[0];
-                                int Number = Convert.ToInt32(dataRow.Split(',')[1]);
-                                string Upi = dataRow.Split(',')[2];
-                                basic.SqlHelper.Insert_Board_table(BatchId, Number, Upi);
+                                Stack_table stackModel = new Stack_table
+                                {
+                                    StackId = scanRes,
+                                    Batch = BatchOfStack,
+                                    PartID = dataRow.Split(',')[1],
+                                    Len = Convert.ToInt32(dataRow.Split(',')[2]),
+                                    Width = Convert.ToInt32(dataRow.Split(',')[3]),
+                                    Thin = Convert.ToInt32(dataRow.Split(',')[4]),
+                                    Material = dataRow.Split(',')[5],
+                                    Pos = Convert.ToInt32(dataRow.Split(',')[6]),
+                                    Pattern = Convert.ToInt32(dataRow.Split(',')[7]),
+                                    Map = dataRow.Split(',')[8],
+                                    Status = 0,
+                                    About = 0,
+                                    DateTime = dateTime
+                                };
+
+                                Stack_tables.Add(stackModel);
                             }
-                            File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme_Parts);
-                        }
+                            Db.Stack_table.AddRange(Stack_tables);
 
-                        //存储批次数量信息
-                        if (File.Exists(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All))
-                        {
-                            string[] BatchInfo = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, Encoding.Default);
-                            string BatchId = BatchInfo[0].Substring(0, BatchInfo[0].Split('.')[0].LastIndexOf('_'));
-                            int BatchNum = Convert.ToInt32(BatchInfo[0].Split(',')[1]);
-                            basic.SqlHelper.Insert_Batch_table(BatchId, BatchNum);
+                            //Db.SaveChanges();
+                            //basic.SqlHelper.Insert_Stack_table(stackModel);
 
-                            File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme_All);
+                            /*Stack_Table(DetailInfo) Inserted Finish , then Insert the StackInfo to the table of StackInfo*/
+                            StackInfo_table stackInfo_Table = new StackInfo_table
+                            {
+                                Batch = BatchOfStack,
+                                StackId = scanRes,
+                                Status = (int)StackStatus.数据解析并存储完成,
+                                PlateAmount = Stack.Count(),
+                                CurrentCount = 0,
+                                StartTime = DateTime.Now,
+                                EndTime = null
+                            };
+
+                            Db.StackInfo_table.Add(stackInfo_Table);
+
+                            /*Update ScanQrCode Status = 2 means Data Analysis and Save Complete*/
+                            var Scan_table = Db.ScanQrCodeRecord.FirstOrDefault(s => s.StackId == scanRes);
+                            Scan_table.Status = (int)ScanQRCodeStatus.数据解析并存储完成;
+                            //Db.SaveChanges();
+
+
+                            File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme);
+
+                            //存储板料信息
+                            if (File.Exists(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts))
+                            {
+                                string[] Parts = File.ReadAllLines(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_parts.csv", Encoding.Default);//(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts, Encoding.Default);
+
+                                if (Parts.Length <= 0)
+                                {
+                                    MessageBox.Show("The infomation of the Stack :" + scanRes + " Parts was analysis failed ,Please check the MDB file!");
+                                    //Log
+                                    return;
+                                }
+
+                                List<Board_table> board_Tables = new List<Board_table>();
+                                board_Tables.Clear();
+
+                                foreach (var dataRow in Parts)
+                                {
+                                    Board_table board_Table = new Board_table
+                                    {
+                                        BatchId = BatchOfStack,
+                                        Upi = dataRow.Split(',')[2],
+                                        Array = Convert.ToInt32(dataRow.Split(',')[1]),
+                                        Status = 0
+                                    };
+
+                                    board_Tables.Add(board_Table);
+                                    //basic.SqlHelper.Insert_Board_table(BatchId, Number, Upi);
+                                }
+
+                                Db.Board_table.AddRange(board_Tables);
+
+                                File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme_Parts);
+                            }
+
+                            //存储批次数量信息
+                            if (File.Exists(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All))
+                            {
+                                string[] BatchInfo = File.ReadAllLines(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_all.csv", Encoding.Default);//(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, Encoding.Default);
+
+                                if (BatchInfo.Length <= 0)
+                                {
+                                    MessageBox.Show("The infomation of the Stack :" + scanRes + " Batch was analysis failed ,Please check the MDB file!");
+                                }
+
+                                Batch_table batch_Table = new Batch_table
+                                {
+                                    BatchId = BatchOfStack,
+                                    AllNum = Convert.ToInt32(BatchInfo[0].Split(',')[1]),
+                                    ComNum = 0,
+                                    Status = 1,
+                                    DateTime = dateTime
+                                };
+
+                                Db.Batch_table.Add(batch_Table);
+
+                                //string BatchId = BatchInfo[0].Substring(0, BatchInfo[0].Split('.')[0].LastIndexOf('_'));
+                                //int BatchNum = Convert.ToInt32(BatchInfo[0].Split(',')[1]);
+                                //basic.SqlHelper.Insert_Batch_table(BatchId, BatchNum);
+
+                                File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme_All);
+                            }
+                            Db.SaveChanges();
                         }
                         Disconnect(Getcsv_IP, Use, Pwd);
                     }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
             }
         }
         #endregion
@@ -1746,81 +1840,81 @@ namespace StackControl
         {
             try
             {
-                tcClient.DeleteDeviceNotification(LeftLoadInt);
-                tcClient.DeleteDeviceNotification(ReqLeftUPI);
-                tcClient.DeleteDeviceNotification(RightLoadInt);
-                tcClient.DeleteDeviceNotification(RightUPI);
+                //tcClient.DeleteDeviceNotification(LeftLoadInt);
+                //tcClient.DeleteDeviceNotification(ReqLeftUPI);
+                //tcClient.DeleteDeviceNotification(RightLoadInt);
+                //tcClient.DeleteDeviceNotification(RightUPI);
 
-                tcClient.DeleteDeviceNotification(LeftPartInWork);
-                tcClient.DeleteDeviceNotification(RightPartInWork);
-                tcClient.DeleteDeviceNotification(LeftLoadReq);
-                tcClient.DeleteDeviceNotification(RightLoadReq);
-                tcClient.DeleteDeviceNotification(ConCh1Int);
-                tcClient.DeleteDeviceNotification(ConCh2Int);
-                tcClient.DeleteDeviceNotification(ConCh3Int);
-                tcClient.DeleteDeviceNotification(ConCh4Int);
-                tcClient.DeleteDeviceNotification(ConCh5Int);
-                tcClient.DeleteDeviceNotification(PartDataReqInt);
-                tcClient.DeleteDeviceNotification(CH1PartDataFBInt);
-                tcClient.DeleteDeviceNotification(CH2PartDataFBInt);
-                tcClient.DeleteDeviceNotification(CH3PartDataFBInt);
-                tcClient.DeleteDeviceNotification(CH4PartDataFBInt);
-                tcClient.DeleteDeviceNotification(CH5PartDataFBInt);
-                tcClient.DeleteDeviceNotification(LeftScanDataReqInt);
-                tcClient.DeleteDeviceNotification(RightScanDataReqInt);
+                //tcClient.DeleteDeviceNotification(LeftPartInWork);
+                //tcClient.DeleteDeviceNotification(RightPartInWork);
+                //tcClient.DeleteDeviceNotification(LeftLoadReq);
+                //tcClient.DeleteDeviceNotification(RightLoadReq);
+                //tcClient.DeleteDeviceNotification(ConCh1Int);
+                //tcClient.DeleteDeviceNotification(ConCh2Int);
+                //tcClient.DeleteDeviceNotification(ConCh3Int);
+                //tcClient.DeleteDeviceNotification(ConCh4Int);
+                //tcClient.DeleteDeviceNotification(ConCh5Int);
+                //tcClient.DeleteDeviceNotification(PartDataReqInt);
+                //tcClient.DeleteDeviceNotification(CH1PartDataFBInt);
+                //tcClient.DeleteDeviceNotification(CH2PartDataFBInt);
+                //tcClient.DeleteDeviceNotification(CH3PartDataFBInt);
+                //tcClient.DeleteDeviceNotification(CH4PartDataFBInt);
+                //tcClient.DeleteDeviceNotification(CH5PartDataFBInt);
+                //tcClient.DeleteDeviceNotification(LeftScanDataReqInt);
+                //tcClient.DeleteDeviceNotification(RightScanDataReqInt);
 
-                tcClient.DeleteVariableHandle(CH1PathFB);
-                tcClient.DeleteVariableHandle(CH1BatchIDFB);
-                tcClient.DeleteVariableHandle(CH2PathFB);
-                tcClient.DeleteVariableHandle(CH2BatchIDFB);
-                tcClient.DeleteVariableHandle(CH3PathFB);
-                tcClient.DeleteVariableHandle(CH3BatchIDFB);
-                tcClient.DeleteVariableHandle(CH4PathFB);
-                tcClient.DeleteVariableHandle(CH4BatchIDFB);
-                tcClient.DeleteVariableHandle(CH5PathFB);
-                tcClient.DeleteVariableHandle(CH5BatchIDFB);
-                tcClient.DeleteVariableHandle(leftUPI);
-                tcClient.DeleteVariableHandle(RightUPI);
-                tcClient.DeleteVariableHandle(LeftLoadRel);
-                tcClient.DeleteVariableHandle(RightLoadRel);
-                tcClient.DeleteDeviceNotification(PickPartFinishReqFB);
-                tcClient.DeleteVariableHandle(NewBatchIDReady);
-                tcClient.DeleteVariableHandle(NewBatchID);
-                tcClient.DeleteVariableHandle(BatchID);
-                tcClient.DeleteVariableHandle(Length);
-                tcClient.DeleteVariableHandle(tWidth);
-                tcClient.DeleteVariableHandle(Thinkness);
-                tcClient.DeleteVariableHandle(Path);
-                tcClient.DeleteVariableHandle(PathID);
-                tcClient.DeleteVariableHandle(ChangeBatch);
-                tcClient.DeleteVariableHandle(PickPartChannel);
+                //tcClient.DeleteVariableHandle(CH1PathFB);
+                //tcClient.DeleteVariableHandle(CH1BatchIDFB);
+                //tcClient.DeleteVariableHandle(CH2PathFB);
+                //tcClient.DeleteVariableHandle(CH2BatchIDFB);
+                //tcClient.DeleteVariableHandle(CH3PathFB);
+                //tcClient.DeleteVariableHandle(CH3BatchIDFB);
+                //tcClient.DeleteVariableHandle(CH4PathFB);
+                //tcClient.DeleteVariableHandle(CH4BatchIDFB);
+                //tcClient.DeleteVariableHandle(CH5PathFB);
+                //tcClient.DeleteVariableHandle(CH5BatchIDFB);
+                //tcClient.DeleteVariableHandle(leftUPI);
+                //tcClient.DeleteVariableHandle(RightUPI);
+                //tcClient.DeleteVariableHandle(LeftLoadRel);
+                //tcClient.DeleteVariableHandle(RightLoadRel);
+                //tcClient.DeleteDeviceNotification(PickPartFinishReqFB);
+                //tcClient.DeleteVariableHandle(NewBatchIDReady);
+                //tcClient.DeleteVariableHandle(NewBatchID);
+                //tcClient.DeleteVariableHandle(BatchID);
+                //tcClient.DeleteVariableHandle(Length);
+                //tcClient.DeleteVariableHandle(tWidth);
+                //tcClient.DeleteVariableHandle(Thinkness);
+                //tcClient.DeleteVariableHandle(Path);
+                //tcClient.DeleteVariableHandle(PathID);
+                //tcClient.DeleteVariableHandle(ChangeBatch);
+                //tcClient.DeleteVariableHandle(PickPartChannel);
 
-                tcClient.DeleteVariableHandle(HeatBeatInt);
-                tcClient.DeleteVariableHandle(PartDataReq);
-                tcClient.DeleteVariableHandle(CH1PartDataFBReset);
-                tcClient.DeleteVariableHandle(CH2PartDataFBReset);
-                tcClient.DeleteVariableHandle(CH3PartDataFBReset);
-                tcClient.DeleteVariableHandle(CH4PartDataFBReset);
-                tcClient.DeleteVariableHandle(CH5PartDataFBReset);
-                tcClient.DeleteVariableHandle(PickPartFinishReqFB);
-                //  tcClient.DeleteVariableHandle(PickPart_Channel);
+                //tcClient.DeleteVariableHandle(HeatBeatInt);
+                //tcClient.DeleteVariableHandle(PartDataReq);
+                //tcClient.DeleteVariableHandle(CH1PartDataFBReset);
+                //tcClient.DeleteVariableHandle(CH2PartDataFBReset);
+                //tcClient.DeleteVariableHandle(CH3PartDataFBReset);
+                //tcClient.DeleteVariableHandle(CH4PartDataFBReset);
+                //tcClient.DeleteVariableHandle(CH5PartDataFBReset);
+                //tcClient.DeleteVariableHandle(PickPartFinishReqFB);
+                ////  tcClient.DeleteVariableHandle(PickPart_Channel);
 
-                tcClient.DeleteVariableHandle(LeftRedLightFB);
-                tcClient.DeleteVariableHandle(LeftGreenLightFB);
-                tcClient.DeleteVariableHandle(LeftYellowLightFB);
+                //tcClient.DeleteVariableHandle(LeftRedLightFB);
+                //tcClient.DeleteVariableHandle(LeftGreenLightFB);
+                //tcClient.DeleteVariableHandle(LeftYellowLightFB);
 
-                tcClient.DeleteVariableHandle(RightRedLightFB);
-                tcClient.DeleteVariableHandle(RightGreenLightFB);
-                tcClient.DeleteVariableHandle(RightYellowLightFB);
+                //tcClient.DeleteVariableHandle(RightRedLightFB);
+                //tcClient.DeleteVariableHandle(RightGreenLightFB);
+                //tcClient.DeleteVariableHandle(RightYellowLightFB);
 
-                tcClient.DeleteDeviceNotification(CH1PatternOKFB);
-                tcClient.DeleteDeviceNotification(CH2PatternOKFB);
-                tcClient.DeleteDeviceNotification(CH3PatternOKFB);
-                tcClient.DeleteDeviceNotification(CH4PatternOKFB);
-                tcClient.DeleteDeviceNotification(CH5PatternOKFB);
+                //tcClient.DeleteDeviceNotification(CH1PatternOKFB);
+                //tcClient.DeleteDeviceNotification(CH2PatternOKFB);
+                //tcClient.DeleteDeviceNotification(CH3PatternOKFB);
+                //tcClient.DeleteDeviceNotification(CH4PatternOKFB);
+                //tcClient.DeleteDeviceNotification(CH5PatternOKFB);
 
 
-                tcClient.Dispose();
+                //tcClient.Dispose();
                 Environment.Exit(0);
             }
             catch (Exception ex)
@@ -1843,6 +1937,160 @@ namespace StackControl
         {
             this.timeTb.Text = DateTime.Now.ToLongDateString() + " " + DateTime.Now.ToLongTimeString();
         }
+        #endregion
+
+        #region Fun
+
+        #region Req_PutOnThePlates 上料请求
+        /// <summary>
+        /// Req_PutOnThePlates 上料请求
+        /// 
+        /// 2021-05-13 22:36:36 Wade Wei
+        /// </summary>
+        /// <param name="About"></param>
+        /// <returns></returns>
+        public bool Req_PutOnThePlates(int About)
+        {
+            bool Result = false;
+            int plcPara_LoadRel = -1;
+            int plcPara_LoadReq = -1;
+            switch (About)
+            {
+                case 1:
+                    plcPara_LoadRel = LeftLoadRel;
+                    plcPara_LoadReq = LeftLoadReq;
+                    break;
+                case 2:
+                    plcPara_LoadRel = RightLoadRel;
+                    plcPara_LoadReq = RightLoadReq;
+                    break;
+                default:
+                    break;
+            }
+            try
+            {
+                using (EDM Db = new EDM())
+                {
+                    var StackInfo = Db.StackInfo_table.FirstOrDefault(s => s.Status == (int)StackStatus.数据解析并存储完成);
+                    if (StackInfo != null)
+                    {
+                        tcClient.WriteAny(plcPara_LoadRel, true);
+
+                        //更新Stack_table
+                        var stack_Table = Db.Stack_table.FirstOrDefault(s => s.StackId == StackInfo.StackId);
+                        stack_Table.About = About;
+
+                        tcClient.WriteAny(plcPara_LoadReq, false);
+
+                        /* Update ScanQrCode Status = 3 means OnLine */
+                        var ScanQRCodeInfo = Db.ScanQrCodeRecord.FirstOrDefault(s => s.StackId == StackInfo.StackId);
+                        ScanQRCodeInfo.Status = (int)ScanQRCodeStatus.上线完成;
+
+                        Db.SaveChanges();
+                        Result = true;
+                    }
+                    else
+                    {
+                        Console.WriteLine("--Req_PutOnThePlate err! About : " + About);
+                        App.Current.Dispatcher.Invoke(() =>
+                        {
+                            Alarmlist.Add(new Alarm() { Message = "--Req_PutOnThePlate err! About : " + About, Timestamp = DateTime.Now });
+                        });
+                        Result = false;
+                    }
+                }
+                return Result;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        #endregion
+
+        #region EnterThePickPlateArea 板垛进入抓板区
+        /// <summary>
+        /// EnterThePickPlateArea
+        /// 
+        /// 2021-05-13 22:47:52 Wade Wei
+        /// </summary>
+        /// <param name="About"></param>
+        /// <returns></returns>
+        public bool EnterThePickPlateArea(int About)
+        {
+            bool Result = false;
+            int PartInWork = -1;
+            switch (About)
+            {
+                case 1:
+                    PartInWork = LeftPartInWork;
+                    break;
+                case 2:
+                    PartInWork = RightPartInWork;
+                    break;
+                default:
+                    break;
+            }
+            try
+            {
+                //2021年5月6日13:37:40 
+                using (EDM Db = new EDM())
+                {
+                    //Get the Stack Infomation Which Status equals 1
+                    var stack_Table = Db.Stack_table.FirstOrDefault(s => s.Status == (int)StackStatus.数据解析并存储完成 && s.About == About);
+
+                    if (stack_Table == null)
+                    {
+                        MessageBox.Show("About : " + About + " There is no Stack Infomation , Please check the system!");
+                        return false;
+                    }
+
+                    //置位PLC value
+                    tcClient.WriteAny(PartInWork, false);
+
+                    stack_Table.Status = (int)StackStatus.进入抓板区;
+
+                    Db.SaveChanges();
+
+                    var StackId = stack_Table.StackId;
+
+                    var BatchId = stack_Table.Batch;
+                    //更新堆垛使用情况
+                    view(StackId);
+
+                    switch (About)
+                    {
+                        case (int)PlatesChannel.左侧:
+                            //更新堆垛id
+                            st1.Text = StackId;
+                            //更新批次id
+                            st3.Text = BatchId;
+                            //更新进料状态,等待抓取
+                            st5.Fill = new SolidColorBrush(Colors.Yellow);
+                            break;
+                        case (int)PlatesChannel.右侧:
+                            //更新堆垛id
+                            st2.Text = StackId;
+                            //更新批次id
+                            st4.Text = BatchId;
+                            //更新进料状态,等待抓取
+                            st6.Fill = new SolidColorBrush(Colors.Yellow);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                return Result = true;
+            }
+            catch (Exception ex)
+            {
+
+                return Result;
+            }
+        }
+        #endregion
         #endregion
     }
 }
