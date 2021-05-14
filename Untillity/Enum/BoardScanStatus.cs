@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace Untillity
 {
-    public enum PlatesChannel
+    public enum BoardScanStatus
     {
-        无 = 0,
-        左侧 = 1,
-        右侧 = 2
+        未扫描 = 0,
+        已扫描 = 1
     }
 }

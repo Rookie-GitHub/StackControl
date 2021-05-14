@@ -214,7 +214,7 @@ namespace StackControl
             //    Db.ScanQrCodeRecord.Add(model);
             //    Db.SaveChanges();
             //}
-            //Analysis(s);
+            Analysis("");
             this.alarm.ItemsSource = Alarmlist;
             CurrentBatch = config.AppSettings.Settings["CurrentBatchID"].Value;
             //showTime();
@@ -838,7 +838,6 @@ namespace StackControl
             bool complete = false;
             try
             {
-                //int waittime = Convert.ToInt32(config.AppSettings.Settings["WaitTime"].Value);
                 string PatternIP = config.AppSettings.Settings["PatternIP_" + HPS].Value;
                 string Use = config.AppSettings.Settings["PatternUsePwd_" + HPS].Value.Split(',')[0];
                 string Pwd = config.AppSettings.Settings["PatternUsePwd_" + HPS].Value.Split(',')[1];
@@ -903,8 +902,6 @@ namespace StackControl
                                     }
                                 }
                             }
-                            //2021 05 10
-                            //Thread.Sleep(waittime);
                             if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.err"))
                             {//上一块板料锯切出错
                                 return false;
@@ -912,7 +909,7 @@ namespace StackControl
 
                             complete = true;
                         }
-                        Disconnect(PatternIP, Use, Pwd);
+                        //Disconnect(PatternIP, Use, Pwd);
                     }
                     else
                     {
@@ -992,6 +989,8 @@ namespace StackControl
         }
         #endregion
 
+        #region 连接共享文件夹
+
         /// <summary>
         /// 连接共享文件夹
         /// </summary>
@@ -1016,7 +1015,9 @@ namespace StackControl
                 proc.StartInfo.RedirectStandardError = true;
                 proc.StartInfo.CreateNoWindow = true;
                 proc.Start();
-                string dosLine = @"net use \\" + remoteHost + " " + passWord + " " + " /user:" + userName + ">NUL";
+                string dosLine = @"net use \\" + remoteHost + " " + "/DELETE"; // + ">NUL";
+                proc.StandardInput.WriteLine(dosLine);
+                dosLine = @"net use \\" + remoteHost + " " + passWord + " " + " /user:" + userName + ">NUL";
                 proc.StandardInput.WriteLine(dosLine);
                 proc.StandardInput.WriteLine("exit");
                 while (proc.HasExited == false)
@@ -1049,6 +1050,8 @@ namespace StackControl
             }
             return Flag;
         }
+
+
 
         /// <summary>
         /// 断开远程共享文件夹
@@ -1107,6 +1110,8 @@ namespace StackControl
             }
             return Flag;
         }
+        #endregion
+
         #endregion
 
         #region ScanQRCode
@@ -1179,63 +1184,63 @@ namespace StackControl
                 {
                     if (Connect(Getcsv_IP, Use, Pwd))
                     {
-                        if (basic.SqlHelper.CheckUnmark())
-                        {
-                            Console.WriteLine(DateTime.Now + " 扫描失败！上料口存在未标记左右的堆垛，请完成操作后重新扫描。");
-                            MessageBox.Show(" 扫描失败！上料口存在未标记左右的堆垛，请完成操作后重新扫描。");
-                            return;
-                        }
-                        if (basic.SqlHelper.CheckCom(StackId))
-                        {
-                            Console.WriteLine(DateTime.Now + "已经完成的批次再次上线，请重新确认批次号");
-                            MessageBox.Show(StackId + " 已经完成的批次再次上线，请重新确认批次号");
-                            return;
-                        }
-
-                        //存储堆垛信息
-                        string[] Stack = File.ReadAllLines(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_1.csv", Encoding.Default);//(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme, Encoding.Default);
-
-                        if (Stack.Length <= 0)
-                        {
-                            MessageBox.Show("The infomation of the Stack : " + scanRes + " was Analysis failed,Please check the MDB file!");
-                            return;
-                        }
-
-                        //The Batch of Stack
-                        var BatchOfStack = Stack[0].Split(',')[0].Split('_')[0];
-
                         using (EDM Db = new EDM())
                         {
+                            var ChekcUnMarkStack = Db.StackInfo_table.Where(s => s.Status == (int)StackStatus.数据解析并存储完成).Count();
+                            if (ChekcUnMarkStack > 0)
+                            {
+                                Console.WriteLine(DateTime.Now + " 扫描失败！上料口存在未标记左右的堆垛，StackId :" + StackId);
+                                MessageBox.Show(" 扫描失败！上料口存在未标记左右的堆垛，请完成操作后重新扫描。");
+                                return;
+                            }
+                            var CheckComStack = Db.ScanQrCodeRecord.Where(s => s.StackId == scanRes && s.Status != (int)ScanQRCodeStatus.扫描完成).Count();
+                            if (CheckComStack > 0)
+                            {
+                                Console.WriteLine(DateTime.Now + "该板垛已完成扫码且数据解析完成，请勿重复扫码，避免造成数据错乱 StackId :" + StackId);
+                                MessageBox.Show("该板垛已完成扫码且数据解析完成，请勿重复扫码，避免造成数据错乱 StackId: " + StackId);
+                                return;
+                            }
+
+                            //存储堆垛信息
+                            List<string> list_Stack = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme, Encoding.Default).ToList();  //(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_1.csv", Encoding.Default).ToList(); 
+
+                            if (list_Stack.Count <= 0)
+                            {
+                                MessageBox.Show("The infomation of the Stack : " + scanRes + " was Analysis failed,Please check the MDB file!");
+                                return;
+                            }
+
+                            //The Batch of Stack
+                            var BatchOfStack = list_Stack[0].Split(',')[0].Split('_')[0];
+
                             List<Stack_table> Stack_tables = new List<Stack_table>();
                             Stack_tables.Clear();
 
                             DateTime dateTime = DateTime.Now;
 
-                            //BUG 
-                            foreach (var dataRow in Stack)
+                            list_Stack.ForEach(s =>
                             {
                                 Stack_table stackModel = new Stack_table
                                 {
                                     StackId = scanRes,
                                     Batch = BatchOfStack,
-                                    PartID = dataRow.Split(',')[1],
-                                    Len = Convert.ToInt32(dataRow.Split(',')[2]),
-                                    Width = Convert.ToInt32(dataRow.Split(',')[3]),
-                                    Thin = Convert.ToInt32(dataRow.Split(',')[4]),
-                                    Material = dataRow.Split(',')[5],
-                                    Pos = Convert.ToInt32(dataRow.Split(',')[6]),
-                                    Pattern = Convert.ToInt32(dataRow.Split(',')[7]),
-                                    Map = dataRow.Split(',')[8],
-                                    Status = 0,
-                                    About = 0,
+                                    PartID = s.Split(',')[1],
+                                    Len = Convert.ToInt32(s.Split(',')[2]),
+                                    Width = Convert.ToInt32(s.Split(',')[3]),
+                                    Thin = Convert.ToInt32(s.Split(',')[4]),
+                                    Material = s.Split(',')[5],
+                                    Pos = Convert.ToInt32(s.Split(',')[6]),
+                                    Pattern = Convert.ToInt32(s.Split(',')[7]),
+                                    Map = s.Split(',')[8],
+                                    Status = (int)StackStatus.数据解析并存储完成,
+                                    About = (int)PlatesChannel.无,
                                     DateTime = dateTime
                                 };
-
                                 Stack_tables.Add(stackModel);
-                            }
+                            });
+
                             Db.Stack_table.AddRange(Stack_tables);
 
-                            //Db.SaveChanges();
                             //basic.SqlHelper.Insert_Stack_table(stackModel);
 
                             /*Stack_Table(DetailInfo) Inserted Finish , then Insert the StackInfo to the table of StackInfo*/
@@ -1244,7 +1249,7 @@ namespace StackControl
                                 Batch = BatchOfStack,
                                 StackId = scanRes,
                                 Status = (int)StackStatus.数据解析并存储完成,
-                                PlateAmount = Stack.Count(),
+                                PlateAmount = list_Stack.Count(),
                                 CurrentCount = 0,
                                 StartTime = DateTime.Now,
                                 EndTime = null
@@ -1254,18 +1259,17 @@ namespace StackControl
 
                             /*Update ScanQrCode Status = 2 means Data Analysis and Save Complete*/
                             var Scan_table = Db.ScanQrCodeRecord.FirstOrDefault(s => s.StackId == scanRes);
-                            Scan_table.Status = (int)ScanQRCodeStatus.数据解析并存储完成;
-                            //Db.SaveChanges();
 
+                            Scan_table.Status = (int)ScanQRCodeStatus.数据解析并存储完成;
 
                             File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme);
 
                             //存储板料信息
                             if (File.Exists(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts))
                             {
-                                string[] Parts = File.ReadAllLines(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_parts.csv", Encoding.Default);//(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts, Encoding.Default);
+                                List<string> list_Parts = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts, Encoding.Default).ToList(); //(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_parts.csv", Encoding.Default);//
 
-                                if (Parts.Length <= 0)
+                                if (list_Parts.Count <= 0)
                                 {
                                     MessageBox.Show("The infomation of the Stack :" + scanRes + " Parts was analysis failed ,Please check the MDB file!");
                                     //Log
@@ -1275,19 +1279,18 @@ namespace StackControl
                                 List<Board_table> board_Tables = new List<Board_table>();
                                 board_Tables.Clear();
 
-                                foreach (var dataRow in Parts)
+                                list_Parts.ForEach(s =>
                                 {
                                     Board_table board_Table = new Board_table
                                     {
                                         BatchId = BatchOfStack,
-                                        Upi = dataRow.Split(',')[2],
-                                        Array = Convert.ToInt32(dataRow.Split(',')[1]),
-                                        Status = 0
+                                        Upi = s.Split(',')[2],
+                                        Array = Convert.ToInt32(s.Split(',')[1]),
+                                        Status = (int)BoardScanStatus.未扫描
                                     };
 
                                     board_Tables.Add(board_Table);
-                                    //basic.SqlHelper.Insert_Board_table(BatchId, Number, Upi);
-                                }
+                                });
 
                                 Db.Board_table.AddRange(board_Tables);
 
@@ -1297,7 +1300,7 @@ namespace StackControl
                             //存储批次数量信息
                             if (File.Exists(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All))
                             {
-                                string[] BatchInfo = File.ReadAllLines(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_all.csv", Encoding.Default);//(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, Encoding.Default);
+                                string[] BatchInfo = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, Encoding.Default);//(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_all.csv", Encoding.Default);
 
                                 if (BatchInfo.Length <= 0)
                                 {
@@ -1309,7 +1312,7 @@ namespace StackControl
                                     BatchId = BatchOfStack,
                                     AllNum = Convert.ToInt32(BatchInfo[0].Split(',')[1]),
                                     ComNum = 0,
-                                    Status = 1,
+                                    Status = (int)BatchStatus.已上线,
                                     DateTime = dateTime
                                 };
 
@@ -1323,7 +1326,7 @@ namespace StackControl
                             }
                             Db.SaveChanges();
                         }
-                        Disconnect(Getcsv_IP, Use, Pwd);
+                        //Disconnect(Getcsv_IP, Use, Pwd);
                     }
                 }
             }
@@ -2038,7 +2041,7 @@ namespace StackControl
                 using (EDM Db = new EDM())
                 {
                     //Get the Stack Infomation Which Status equals 1
-                    var stack_Table = Db.Stack_table.FirstOrDefault(s => s.Status == (int)StackStatus.数据解析并存储完成 && s.About == About);
+                    var stack_Table = Db.Stack_table.Where(s => s.Status == (int)StackStatus.数据解析并存储完成 && s.About == About).ToList();
 
                     if (stack_Table == null)
                     {
@@ -2049,13 +2052,20 @@ namespace StackControl
                     //置位PLC value
                     tcClient.WriteAny(PartInWork, false);
 
-                    stack_Table.Status = (int)StackStatus.进入抓板区;
+                    stack_Table.ForEach(s =>
+                    {
+                        s.Status = (int)StackStatus.进入抓板区;
+                    });
+
+                    var StackId = stack_Table[0].StackId;
+
+                    var BatchId = stack_Table[0].Batch;
+
+                    var stackInfo = Db.StackInfo_table.FirstOrDefault(s => s.StackId == StackId);
+
+                    stackInfo.Status = (int)StackStatus.进入抓板区;
 
                     Db.SaveChanges();
-
-                    var StackId = stack_Table.StackId;
-
-                    var BatchId = stack_Table.Batch;
                     //更新堆垛使用情况
                     view(StackId);
 

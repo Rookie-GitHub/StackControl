@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace Untillity
 {
-    public enum PlatesChannel
+    public enum BatchStatus
     {
-        无 = 0,
-        左侧 = 1,
-        右侧 = 2
+        已上线 = 1,
+        已完成 = 2
     }
 }
