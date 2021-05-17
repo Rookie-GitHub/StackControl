@@ -1,7 +1,6 @@
 ﻿using DTO.EDM;
 using SerialCom.SerialLogic;
 using StackControl.basic;
-using StackControl.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -190,6 +190,12 @@ namespace StackControl
         string _StackID = "";
         int _PartID = -1;
         #endregion
+
+        #region InTimer Control
+        int inTimer_PickBoard = 0;
+        int inTimer_PickBoardFinish = 0;
+        #endregion
+
 
         #region windows Loaded
         public MainWindow()
@@ -1249,6 +1255,7 @@ namespace StackControl
                                 Batch = BatchOfStack,
                                 StackId = scanRes,
                                 Status = (int)StackStatus.数据解析并存储完成,
+                                About = (int)PlatesChannel.无,
                                 PlateAmount = list_Stack.Count(),
                                 CurrentCount = 0,
                                 StartTime = DateTime.Now,
@@ -1346,11 +1353,13 @@ namespace StackControl
         /// </summary>
         private void PickBoardTimer()
         {
-            DispatcherTimer showTimer = new DispatcherTimer();
-            showTimer.Tick += new EventHandler(PickBoardEvent);
-            showTimer.Interval = new TimeSpan(0, 0, 0, 1, 0);
-            showTimer.Start();
+            // Timers 非UI线程 
+            System.Timers.Timer timer = new System.Timers.Timer();
+            timer.Enabled = true;//设置是否执行Elapsed事件
+            timer.Elapsed += new ElapsedEventHandler(PickBoardEvent);//绑定Elapsed事件
+            timer.Interval = 1000;//设置时间间隔
         }
+
         /// <summary>
         /// Pick Board Event
         /// </summary>
@@ -1358,105 +1367,115 @@ namespace StackControl
         /// <param name="e"></param>
         private void PickBoardEvent(object sender, EventArgs e)
         {
-            try
+            //Timer lock control the Repeat
+            if (Interlocked.Exchange(ref inTimer_PickBoard, 1) == 0)
             {
-                var Req = (bool)tcClient.ReadAny(PartDataReq, typeof(bool));
-                if (!Req)
+                try
                 {
-                    return;
-                }
-
-                int About = -1;
-                int PickPart_Channel = Convert.ToInt32(tcClient.ReadAny(PickPartChannel, typeof(int)));
-                if (PickPart_Channel == 99)
-                {
-                    //确定当前批次
-                    currentBatch = SqlHelper.CheckCurrentBatch();
-                    if (!string.IsNullOrEmpty(currentBatch))
+                    var Req = (bool)tcClient.ReadAny(PartDataReq, typeof(bool));
+                    if (!Req)
                     {
+                        return;
+                    }
 
-                        About = SqlHelper.ExistCurrentBatch(currentBatch);
-                        //工作区是否有当前批次判断
-                        if (About > 0)
+                    using (EDM Db = new EDM())
+                    {
+                        int About = -1;
+                        string currentStackId = "";
+                        int currentStackNum = -1;
+                        int AmountStackNum = -1;
+                        bool BasePlate = false;
+                        int PickPart_Channel = Convert.ToInt32(tcClient.ReadAny(PickPartChannel, typeof(int)));
+
+                        //先看有没有《开始抓板》状态的 ，如果有，则取批次 如果没有，看有没有在《抓板区待抓板》的，按时间正序取最早一条，
+                        var PickingStack = Db.StackInfo_table.Where(s => s.Status == (int)StackStatus.开始抓板).FirstOrDefault();
+
+                        if (PickingStack != null)
                         {
-                            SendData(About, 1, 2, 3, 4, 5);
+                            currentStackId = PickingStack.StackId;
+                            About = PickingStack.About;
+                            currentStackNum = PickingStack.CurrentCount;
+                            AmountStackNum = PickingStack.PlateAmount;
+                            currentBatch = PickingStack.Batch;
                         }
                         else
                         {
-                            //没有当前批次
-                            //等待当前批次，或者强制更新为其他批次
-                            while (!ForceChangeBatch)
+                            var WaitPickStack = Db.StackInfo_table.Where(s => s.Status == (int)StackStatus.抓板区).OrderBy(s => s.StartTime).FirstOrDefault();
+
+                            if (WaitPickStack != null)
                             {
-                                Thread.Sleep(200);
-                                About = SqlHelper.ExistCurrentBatch(currentBatch);
-                                if (About > 0)
-                                {
-                                    SendData(About, 1, 2, 3, 4, 5);
-                                    break;
-                                }
-                            }
-                            if (ForceChangeBatch)
-                            {
-                                SqlHelper.Update_BatchStatus(currentBatch, 2);
-                                currentBatch = SqlHelper.CheckCurrentBatch();
-                                About = SqlHelper.ExistCurrentBatch(currentBatch);
-                                if (About > 0)
-                                {
-                                    SendData(About, 1, 2, 3, 4, 5);
-                                }
+                                currentStackId = WaitPickStack.StackId;
+                                About = WaitPickStack.About;
+                                currentStackNum = WaitPickStack.CurrentCount;
+                                AmountStackNum = WaitPickStack.PlateAmount;
+                                currentBatch = PickingStack.Batch;
                             }
                         }
-                    }
 
+                        if (!string.IsNullOrWhiteSpace(currentStackId) && About != -1)
+                        {
+                            //send message about new btach 
+                            if (!Equals(CurrentBatch, currentBatch) && !string.IsNullOrWhiteSpace(currentBatch))
+                            {
+                                tcClient.WriteAny(NewBatchID, currentBatch, new int[] { 30 });
+                                tcClient.WriteAny(NewBatchIDReady, true);
+                            }
+                            //Update CurrentBatch value
+                            CurrentBatch = currentBatch;
+
+                            if (PickPart_Channel == 99)
+                            {
+                                SendData(About, currentBatch, currentStackId);
+                            }
+                            else if (PickPart_Channel == 1 || PickPart_Channel == 2)
+                            {
+                                //less than 40
+                                if (AmountStackNum < 40 && currentStackNum == AmountStackNum)
+                                {
+                                    //The last plate
+                                    BasePlate = true;
+                                }
+                                else if (AmountStackNum > 40 && currentStackNum % 40 == 0)
+                                {
+                                    //The last plate
+                                    BasePlate = true;
+                                }
+                                else if (currentStackNum == AmountStackNum)
+                                {
+                                    //The last plate
+                                    BasePlate = true;
+                                }
+                                else
+                                {
+                                    //The last plate
+                                    BasePlate = false;
+                                }
+                                //is the last plate
+                                if (BasePlate)
+                                {
+                                    tcClient.WriteAny(Path, (short)88);
+                                    tcClient.WriteAny(PartDataReq, false);
+                                }
+                                else
+                                    SendData(PickPart_Channel, currentBatch, currentStackId);
+                            }
+                        }
+                        else
+                        {
+                            //there is dont have currentBatch , Close the request 
+                            tcClient.WriteAny(PartDataReq, false);
+                            Console.WriteLine("There is no board to pick！");
+                        }
+                    }
                 }
-                else if (PickPart_Channel == 1 || PickPart_Channel == 2)
+                catch (Exception ex)
                 {
-                    currentBatch = SqlHelper.CheckCurrentBatch();
-                    if (string.IsNullOrWhiteSpace(currentBatch))
-                    {
-                        //there is dont have currentBatch , Close the request 
-                        tcClient.WriteAny(PartDataReq, false);
-                        return;
-                    }
-                    (int curBatchNum, int tolBatchNum) = SqlHelper.QueryBatchQuantity(currentBatch);
-                    //小于40张
-                    if (tolBatchNum < 40 && curBatchNum == tolBatchNum)
-                    {
-                        //The backing plate
-                        tcClient.WriteAny(Path, (short)88);
-                        tcClient.WriteAny(PartDataReq, false);
-                    }
-                    else if (tolBatchNum > 40 && curBatchNum % 40 == 0)
-                    {
-                        //The backing plate
-                        tcClient.WriteAny(Path, (short)88);
-                        tcClient.WriteAny(PartDataReq, false);
-                    }
-                    else if (curBatchNum == tolBatchNum)
-                    {
-                        //The backing plate
-                        tcClient.WriteAny(Path, (short)88);
-                        tcClient.WriteAny(PartDataReq, false);
-                    }
-                    else
-                    {
-                        SendData(PickPart_Channel, 1, 2, 3, 4, 5);
-                    }
+                    Console.WriteLine(ex.Message);
                 }
-
-                //给plc发送新批次信息
-                if (!Equals(CurrentBatch, currentBatch) && !string.IsNullOrWhiteSpace(currentBatch))
+                finally
                 {
-                    //给plc发送新批次信息
-                    tcClient.WriteAny(NewBatchID, currentBatch, new int[] { 30 });
-                    tcClient.WriteAny(NewBatchIDReady, true);
+                    Interlocked.Exchange(ref inTimer_PickBoard, 0);
                 }
-
-                CurrentBatch = currentBatch;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
             }
         }
         #endregion
@@ -1471,21 +1490,35 @@ namespace StackControl
         /// <param name="channel3"></param>
         /// <param name="channel4"></param>
         /// <param name="channel5"></param>
-        private void SendData(int About, int channel1, int channel2, int channel3, int channel4, int channel5)
+        private void SendData(int About, string Batch, string StackId)
         {
+            var channel = -1;
             //有当前批次,给plc通道号
             if (ConCh1Status)
-                SendDataToPlc(channel1, About);
+                channel = 1;
             else if (ConCh2Status)
-                SendDataToPlc(channel2, About);
+                channel = 2;
             else if (ConCh3Status)
-                SendDataToPlc(channel3, About);
+                channel = 3;
             else if (ConCh4Status)
-                SendDataToPlc(channel4, About);
+                channel = 4;
             else if (ConCh5Status)
-                SendDataToPlc(channel5, About);
+                channel = 5;
             else
-                return;//there is no channel need The Board .
+                channel = -1;//there is no channel need The Board .
+
+            if (channel != -1)
+                SendDataToPlc(channel, About, Batch, StackId);
+            else
+            {
+                Console.WriteLine(DateTime.Now + "SendData ：There is no channel to send board");
+                MessageBox.Show("There is no channel to send board");
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    Alarmlist.Add(new Alarm() { Message = "SendData ：There is no channel to send board", Timestamp = DateTime.Now });
+
+                });
+            }
         }
         #endregion
 
@@ -1494,28 +1527,56 @@ namespace StackControl
         /// 发送板料信息到plc
         /// </summary>
         /// <param name="hps">输送线通道号1,2,3,4,5</param>
-        private void SendDataToPlc(int hps, int about)
+        /// <param name="about">plates stack channel</param>
+        /// <param name="Batch">Batch</param>
+        /// <param name="StackId">StackId</param>
+        private void SendDataToPlc(int hps, int about, string Batch, string StackId)
         {
             try
             {
-                DataTable DT = basic.SqlHelper.GetBoardDeatail(about);
-                string splitPattern = DT.Rows[0][7].ToString().Split('.')[0].Split('-')[DT.Rows[0][7].ToString().Split('.')[0].Split('-').Length - 1];
-                string splitBatchIDtring = DT.Rows[0][7].ToString().Split('.')[0].Substring(0, DT.Rows[0][7].ToString().Split('.')[0].LastIndexOf('-'));
-                tcClient.WriteAny(BatchID, splitBatchIDtring, new int[] { 30 });                         //批次编号
-                tcClient.WriteAny(Length, (short)Convert.ToInt16(DT.Rows[0][1]));                        //板料长度
-                tcClient.WriteAny(tWidth, (short)Convert.ToInt16(DT.Rows[0][2]));                        //板料宽度
-                tcClient.WriteAny(Thinkness, (short)Convert.ToInt16(DT.Rows[0][3]));                     //板料厚度
-                tcClient.WriteAny(Path, (short)Convert.ToInt16(hps));
-                //路径分配编号                                                        
-                _PartID = Convert.ToInt16(DT.Rows[0][4]);
-                tcClient.WriteAny(PathID, (short)_PartID);                                              //板料ID编号
-                tcClient.WriteAny(PickPartChannel, (short)about);
-                //抓板通道号
-                _StackID = DT.Rows[0][6].ToString();
-                tcClient.WriteAny(StackID, _StackID, new int[] { 30 });                                    //堆垛编号
-                tcClient.WriteAny(Pattern, splitPattern, new int[] { 30 });                              //锯切图号
-                Thread.Sleep(100);
-                tcClient.WriteAny(PartDataReq, false);
+                using (EDM Db = new EDM())
+                {
+                    var BoardInfo = Db.Stack_table.Where(s => s.Batch == Batch && s.StackId == StackId && s.Status == (int)StackStatus.抓板区).OrderByDescending(s => s.Pos).FirstOrDefault();
+
+                    var map = BoardInfo.Map;
+
+                    string splitPattern = map.ToString().Split('.')[0].Split('-')[map.ToString().Split('.')[0].Split('-').Length - 1];
+                    //批次编号
+                    tcClient.WriteAny(BatchID, Batch, new int[] { 30 });
+                    //板料长度
+                    tcClient.WriteAny(Length, (short)Convert.ToInt16(BoardInfo.Len));
+                    //板料宽度
+                    tcClient.WriteAny(tWidth, (short)Convert.ToInt16(BoardInfo.Width));
+                    //板料厚度
+                    tcClient.WriteAny(Thinkness, (short)Convert.ToInt16(BoardInfo.Thin));
+                    //
+                    tcClient.WriteAny(Path, (short)Convert.ToInt16(hps));
+                    //路径分配编号                                                        
+                    _PartID = Convert.ToInt16(BoardInfo.PartID);
+                    //板料ID编号
+                    tcClient.WriteAny(PathID, (short)_PartID);
+                    //抓板通道号
+                    tcClient.WriteAny(PickPartChannel, (short)about);
+                    //堆垛编号
+                    tcClient.WriteAny(StackID, StackId, new int[] { 30 });
+                    //锯切图号
+                    tcClient.WriteAny(Pattern, splitPattern, new int[] { 30 });
+
+                    Thread.Sleep(50);
+                    //清空请求
+                    tcClient.WriteAny(PartDataReq, false);
+
+                    BoardInfo.Status = (int)StackStatus.开始抓板;
+
+                    var StackInfo_table = Db.StackInfo_table.Where(s => s.Batch == Batch && s.StackId == StackId && s.Status == (int)StackStatus.抓板区).FirstOrDefault();
+
+                    if (StackInfo_table != null)
+                    {
+                        StackInfo_table.Status = (int)StackStatus.开始抓板;
+                    }
+
+                    Db.SaveChanges();
+                }
             }
             catch (Exception ex)
             {
@@ -1537,11 +1598,13 @@ namespace StackControl
         /// </summary>
         private void PickBoardFinishTimer()
         {
-            DispatcherTimer showTimer = new DispatcherTimer();
-            showTimer.Tick += new EventHandler(PickBoardFinishEvent);
-            showTimer.Interval = new TimeSpan(0, 0, 0, 1, 0);
-            showTimer.Start();
+            // Timers 非UI线程 
+            System.Timers.Timer timer = new System.Timers.Timer();
+            timer.Enabled = true;//设置是否执行Elapsed事件
+            timer.Elapsed += new ElapsedEventHandler(PickBoardFinishEvent);//绑定Elapsed事件
+            timer.Interval = 1000;//设置时间间隔
         }
+
         /// <summary>
         /// Pick Board Event
         /// </summary>
@@ -1549,39 +1612,54 @@ namespace StackControl
         /// <param name="e"></param>
         private void PickBoardFinishEvent(object sender, EventArgs e)
         {
-            try
+            //Timer lock control the Repeat
+            if (Interlocked.Exchange(ref inTimer_PickBoardFinish, 1) == 0)
             {
-                var Fin = (bool)tcClient.ReadAny(PickPartFinishReqFB, typeof(bool));
-                if (!Fin)
+                int about = -1;
+                int BatchSurplusCount = -1;
+                int StackSurplusCount = -1;
+                try
                 {
-                    return;
+                    var Fin = (bool)tcClient.ReadAny(PickPartFinishReqFB, typeof(bool));
+                    if (!Fin)
+                    {
+                        return;
+                    }
+                    using (EDM Db = new EDM())
+                    {
+
+                        //找到 stack_table 中 status = 2(开始抓板) Board 
+                        var BoardInfo = Db.Stack_table.Where(s => s.Status == (int)StackStatus.开始抓板).OrderByDescending(s => s.Pos).FirstOrDefault();
+                        about = (int)BoardInfo.About;
+                        int _PartID = Convert.ToInt16(BoardInfo.PartID);
+                        string _StackID = BoardInfo.StackId;
+                        //todo: 更新Stack_table Board Status 
+                        (int Pos, int About, int BatchSurplusCount1, int StackSurplusCount1) = SqlHelper.UpdateStatus2(currentBatch, _StackID, _PartID.ToString());
+                    }
+
+                    tcClient.WriteAny(PickPartChannel, (short)0);
+                    tcClient.WriteAny(PickPartFinishReqFB, false);
+
+                    //chuli view 
+                    switch (about)
+                    {
+                        case 1:
+                            this.st1Count.Text = StackSurplusCount.ToString();
+                            break;
+                        case 2:
+                            this.st2Count.Text = StackSurplusCount.ToString();
+                            break;
+                    }
+                    //upe_Background(Pos, 3, About);
                 }
-
-                currentBatch = SqlHelper.CheckCurrentBatch();
-                int about = SqlHelper.ExistCurrentBatch(currentBatch);
-                DataTable DT = basic.SqlHelper.GetBoardDeatail(about);
-                int _PartID = Convert.ToInt16(DT.Rows[0][4]);
-                string _StackID = DT.Rows[0][6].ToString();
-                (int Pos, int About, int BatchSurplusCount, int StackSurplusCount) = SqlHelper.UpdateStatus2(currentBatch, _StackID, _PartID.ToString());
-
-                tcClient.WriteAny(PickPartChannel, (short)0);
-                tcClient.WriteAny(PickPartFinishReqFB, false);
-
-                //chuli view 
-                switch (about)
+                catch (Exception ex)
                 {
-                    case 1:
-                        this.st1Count.Text = StackSurplusCount.ToString();
-                        break;
-                    case 2:
-                        this.st2Count.Text = StackSurplusCount.ToString();
-                        break;
+                    Console.WriteLine(ex.Message);
                 }
-                upe_Background(Pos, 3, About);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
+                finally
+                {
+                    Interlocked.Exchange(ref inTimer_PickBoardFinish, 0);
+                }
             }
         }
         #endregion
@@ -1931,6 +2009,7 @@ namespace StackControl
         #region show current time
         private void showTime()
         {
+            //DispatcherTimer Ui线程 可以直接处理页面
             DispatcherTimer showTimer = new DispatcherTimer();
             showTimer.Tick += new EventHandler(ShowCurrentTime);
             showTimer.Interval = new TimeSpan(0, 0, 0, 1, 0);
@@ -1978,7 +2057,8 @@ namespace StackControl
                     if (StackInfo != null)
                     {
                         tcClient.WriteAny(plcPara_LoadRel, true);
-
+                        //Update StackInfo ：About 
+                        StackInfo.About = About;
                         //更新Stack_table
                         var stack_Table = Db.Stack_table.FirstOrDefault(s => s.StackId == StackInfo.StackId);
                         stack_Table.About = About;
@@ -2054,7 +2134,7 @@ namespace StackControl
 
                     stack_Table.ForEach(s =>
                     {
-                        s.Status = (int)StackStatus.进入抓板区;
+                        s.Status = (int)StackStatus.抓板区;
                     });
 
                     var StackId = stack_Table[0].StackId;
@@ -2063,7 +2143,7 @@ namespace StackControl
 
                     var stackInfo = Db.StackInfo_table.FirstOrDefault(s => s.StackId == StackId);
 
-                    stackInfo.Status = (int)StackStatus.进入抓板区;
+                    stackInfo.Status = (int)StackStatus.抓板区;
 
                     Db.SaveChanges();
                     //更新堆垛使用情况
@@ -2096,7 +2176,6 @@ namespace StackControl
             }
             catch (Exception ex)
             {
-
                 return Result;
             }
         }

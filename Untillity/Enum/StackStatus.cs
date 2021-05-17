@@ -12,7 +12,7 @@ namespace Untillity
     public enum StackStatus
     {
         数据解析并存储完成 = 0,
-        进入抓板区 = 1,
+        抓板区 = 1,
         开始抓板 = 2,
         抓板完成 = 3
     }
