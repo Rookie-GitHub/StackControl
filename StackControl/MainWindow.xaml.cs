@@ -246,7 +246,6 @@ namespace StackControl
             {
                 MessageBox.Show(ex.Message + "Cannot connect with PLC(ConnPLC)");
             }
-
         }
 
         #endregion
@@ -318,8 +317,6 @@ namespace StackControl
                 RightScanDataReqInt = tcClient.AddDeviceNotification(".RightScanData_Req", dataStream, 16, 1, AdsTransMode.OnChange, 100, 0, null);
 
                 PickPartFinishReqInt = tcClient.AddDeviceNotification(".PickPartFinish", dataStream, 17, 1, AdsTransMode.OnChange, 100, 0, null);
-
-
 
                 tcClient.AdsNotification += new AdsNotificationEventHandler(tcClient_OnNotification);
                 #endregion 
@@ -661,72 +658,106 @@ namespace StackControl
                 {
                     if (binRead.ReadBoolean())
                     {
-                        NO1HPSPlateID = tcClient.ReadAny(CH1BatchIDFB, typeof(string), new int[] { 30 }).ToString();      //板料编号
-                        string _CH1PatternFB = tcClient.ReadAny(CH1PatternFB, typeof(string), new int[] { 30 }).ToString();       //锯切图编号
-                        if (SendActivateFileToHps(1, NO1HPSPlateID, _CH1PatternFB))
-                        {
-                            hps1.Text = NO1HPSPlateID + "-" + _CH1PatternFB;
-                            tcClient.WriteAny(CH1PatternOKFB, true);
-                        }
-                        tcClient.WriteAny(CH1PartDataFBReset, false);
+
+                        Thread.Sleep(100);
+
+                        SendCutPic((int)CuttingMachineNo.一号锯);
+
+                        #region 原代码注释掉
+                        //NO1HPSPlateID = tcClient.ReadAny(CH1BatchIDFB, typeof(string), new int[] { 30 }).ToString();//批次
+                        //string _CH1PatternFB = tcClient.ReadAny(CH1PatternFB, typeof(string), new int[] { 30 }).ToString();       //锯切图编号
+                        //if (SendActivateFileToHps(1, NO1HPSPlateID, _CH1PatternFB))
+                        //{
+                        //    hps1.Text = NO1HPSPlateID + "-" + _CH1PatternFB;
+                        //    tcClient.WriteAny(CH1PatternOKFB, true);
+                        //}
+                        //tcClient.WriteAny(CH1PartDataFBReset, false);
+                        #endregion
                     }
                 }
                 else if (e.NotificationHandle == CH2PartDataFBInt)
                 {
                     if (binRead.ReadBoolean())
                     {
-                        NO2HPSPlateID = tcClient.ReadAny(CH2BatchIDFB, typeof(string), new int[] { 30 }).ToString();
-                        string _CH2PatternFB = tcClient.ReadAny(CH2PatternFB, typeof(string), new int[] { 30 }).ToString();
-                        if (SendActivateFileToHps(2, NO2HPSPlateID, _CH2PatternFB))
-                        {
-                            hps2.Text = NO2HPSPlateID + "-" + _CH2PatternFB;
-                            tcClient.WriteAny(CH2PatternOKFB, true);
-                        }
+                        Thread.Sleep(100);
 
-                        tcClient.WriteAny(CH2PartDataFBReset, false);
+                        SendCutPic((int)CuttingMachineNo.二号锯);
+
+                        #region 原代码注释掉
+                        //NO2HPSPlateID = tcClient.ReadAny(CH2BatchIDFB, typeof(string), new int[] { 30 }).ToString();
+                        //string _CH2PatternFB = tcClient.ReadAny(CH2PatternFB, typeof(string), new int[] { 30 }).ToString();
+                        //if (SendActivateFileToHps(2, NO2HPSPlateID, _CH2PatternFB))
+                        //{
+                        //    hps2.Text = NO2HPSPlateID + "-" + _CH2PatternFB;
+                        //    tcClient.WriteAny(CH2PatternOKFB, true);
+                        //}
+
+                        //tcClient.WriteAny(CH2PartDataFBReset, false);
+                        #endregion
                     }
                 }
                 else if (e.NotificationHandle == CH3PartDataFBInt)
                 {
                     if (binRead.ReadBoolean())
                     {
-                        NO3HPSPlateID = tcClient.ReadAny(CH3BatchIDFB, typeof(string), new int[] { 30 }).ToString();
-                        string _CH3PatternFB = tcClient.ReadAny(CH3PatternFB, typeof(string), new int[] { 30 }).ToString();
-                        if (SendActivateFileToHps(3, NO3HPSPlateID, _CH3PatternFB))
-                        {
-                            hps3.Text = NO3HPSPlateID + "-" + _CH3PatternFB;
-                            tcClient.WriteAny(CH3PatternOKFB, true);
-                        }
-                        tcClient.WriteAny(CH3PartDataFBReset, false);
+
+                        Thread.Sleep(100);
+
+                        SendCutPic((int)CuttingMachineNo.三号锯);
+
+                        #region 原代码注释掉
+                        //NO3HPSPlateID = tcClient.ReadAny(CH3BatchIDFB, typeof(string), new int[] { 30 }).ToString();
+                        //string _CH3PatternFB = tcClient.ReadAny(CH3PatternFB, typeof(string), new int[] { 30 }).ToString();
+                        //if (SendActivateFileToHps(3, NO3HPSPlateID, _CH3PatternFB))
+                        //{
+                        //    hps3.Text = NO3HPSPlateID + "-" + _CH3PatternFB;
+                        //    tcClient.WriteAny(CH3PatternOKFB, true);
+                        //}
+                        //tcClient.WriteAny(CH3PartDataFBReset, false);
+                        #endregion
                     }
                 }
                 else if (e.NotificationHandle == CH4PartDataFBInt)
                 {
                     if (binRead.ReadBoolean())
                     {
-                        NO4HPSPlateID = tcClient.ReadAny(CH4BatchIDFB, typeof(string), new int[] { 30 }).ToString();
-                        string _CH4PatternFB = tcClient.ReadAny(CH4PatternFB, typeof(string), new int[] { 30 }).ToString();
-                        if (SendActivateFileToHps(4, NO4HPSPlateID, _CH4PatternFB))
-                        {
-                            hps4.Text = NO4HPSPlateID + "-" + _CH4PatternFB;
-                            tcClient.WriteAny(CH4PatternOKFB, true);
-                        }
-                        tcClient.WriteAny(CH4PartDataFBReset, false);
+
+                        Thread.Sleep(100);
+
+                        SendCutPic((int)CuttingMachineNo.四号锯);
+
+                        #region 原代码注释掉
+                        //NO4HPSPlateID = tcClient.ReadAny(CH4BatchIDFB, typeof(string), new int[] { 30 }).ToString();
+                        //string _CH4PatternFB = tcClient.ReadAny(CH4PatternFB, typeof(string), new int[] { 30 }).ToString();
+                        //if (SendActivateFileToHps(4, NO4HPSPlateID, _CH4PatternFB))
+                        //{
+                        //    hps4.Text = NO4HPSPlateID + "-" + _CH4PatternFB;
+                        //    tcClient.WriteAny(CH4PatternOKFB, true);
+                        //}
+                        //tcClient.WriteAny(CH4PartDataFBReset, false);
+                        #endregion
                     }
                 }
                 else if (e.NotificationHandle == CH5PartDataFBInt)
                 {
                     if (binRead.ReadBoolean())
                     {
-                        NO5HPSPlateID = tcClient.ReadAny(CH5BatchIDFB, typeof(string), new int[] { 30 }).ToString();
-                        string _CH5StackIDFB = tcClient.ReadAny(CH5StackIDFB, typeof(string), new int[] { 30 }).ToString();
-                        string _CH5PatternFB = tcClient.ReadAny(CH5PatternFB, typeof(string), new int[] { 30 }).ToString();
-                        if (SendActivateFileToHps(5, NO5HPSPlateID, _CH5PatternFB))
-                        {
-                            hps5.Text = NO5HPSPlateID + "-" + _CH5PatternFB;
-                            tcClient.WriteAny(CH5PatternOKFB, true);
-                        }
-                        tcClient.WriteAny(CH5PartDataFBReset, false);
+
+                        Thread.Sleep(100);
+
+                        SendCutPic((int)CuttingMachineNo.五号锯);
+
+                        #region 原代码注释掉
+                        //NO5HPSPlateID = tcClient.ReadAny(CH5BatchIDFB, typeof(string), new int[] { 30 }).ToString();
+                        //string _CH5StackIDFB = tcClient.ReadAny(CH5StackIDFB, typeof(string), new int[] { 30 }).ToString();
+                        //string _CH5PatternFB = tcClient.ReadAny(CH5PatternFB, typeof(string), new int[] { 30 }).ToString();
+                        //if (SendActivateFileToHps(5, NO5HPSPlateID, _CH5PatternFB))
+                        //{
+                        //    hps5.Text = NO5HPSPlateID + "-" + _CH5PatternFB;
+                        //    tcClient.WriteAny(CH5PatternOKFB, true);
+                        //}
+                        //tcClient.WriteAny(CH5PartDataFBReset, false);
+                        #endregion
                     }
                 }
 
@@ -865,7 +896,8 @@ namespace StackControl
                             string str7 = "DREHEN = 0";
 
                             if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.err"))
-                            {//上一块板料锯切出错
+                            {
+                                //上一块板料锯切出错
                                 File.Delete(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.err");
                             }
                             if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.erl"))
@@ -874,42 +906,32 @@ namespace StackControl
                             }
 
                             if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\" + FileNme))
-                            {//上一块板料锯切未执行
+                            {
+                                //上一块板料锯切未执行
                                 return false;
                             }
 
                             using (StreamWriter sw = new StreamWriter(@"\\" + PatternIP + @"\" + PatternGoal + @"\" + FileNme, false, Encoding.GetEncoding("gb2312")))
                             {
-                                for (int i = 8; i > 0; i--)
-                                {
-                                    switch (i)
-                                    {
-                                        case 7:
-                                            sw.WriteLine(str1);
-                                            break;
-                                        case 6:
-                                            sw.WriteLine(str2);
-                                            break;
-                                        case 5:
-                                            sw.WriteLine(str3);
-                                            break;
-                                        case 4:
-                                            sw.WriteLine(str4);
-                                            break;
-                                        case 3:
-                                            sw.WriteLine(str5);
-                                            break;
-                                        case 2:
-                                            sw.WriteLine(str6);
-                                            break;
-                                        case 1:
-                                            sw.WriteLine(str7);
-                                            break;
-                                    }
-                                }
+                                //for (int i = 8; i > 0; i--)
+                                //{
+                                //    switch (i)
+                                //    {
+                                //        case 7:
+                                //            break;
+                                //    }
+                                //}
+                                sw.WriteLine(str1);
+                                sw.WriteLine(str2);
+                                sw.WriteLine(str3);
+                                sw.WriteLine(str4);
+                                sw.WriteLine(str5);
+                                sw.WriteLine(str6);
+                                sw.WriteLine(str7);
                             }
                             if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.err"))
-                            {//上一块板料锯切出错
+                            {
+                                //上一块板料锯切出错
                                 return false;
                             }
 
@@ -996,7 +1018,6 @@ namespace StackControl
         #endregion
 
         #region 连接共享文件夹
-
         /// <summary>
         /// 连接共享文件夹
         /// </summary>
@@ -1057,8 +1078,9 @@ namespace StackControl
             return Flag;
         }
 
+        #endregion
 
-
+        #region 断开远程文件夹 合并在连接时先断开
         /// <summary>
         /// 断开远程共享文件夹
         /// </summary>
@@ -1117,7 +1139,6 @@ namespace StackControl
             return Flag;
         }
         #endregion
-
         #endregion
 
         #region ScanQRCode
@@ -1619,7 +1640,7 @@ namespace StackControl
             if (Interlocked.Exchange(ref inTimer_PickBoardFinish, 1) == 0)
             {
                 int about = -1;
-                int BatchSurplusCount = -1;
+                //int BatchSurplusCount = -1;
                 int StackSurplusCount = -1;
                 try
                 {
@@ -1635,17 +1656,27 @@ namespace StackControl
                         about = (int)BoardInfo.About;
                         int _PartID = Convert.ToInt16(BoardInfo.PartID);
                         string _StackID = BoardInfo.StackId;
-                        //todo: 更新Stack_table Board Status 
-                        (int Pos, int About, int BatchSurplusCount1, int StackSurplusCount1) = SqlHelper.UpdateStatus2(currentBatch, _StackID, _PartID.ToString());
+                        string _BatchId = BoardInfo.Batch;
+
+                        //(int Pos, int About, int BatchSurplusCount1, int StackSurplusCount1) = SqlHelper.UpdateStatus2(currentBatch, _StackID, _PartID.ToString());
 
                         BoardInfo.Status = (int)StackStatus.单板抓板完成;
 
+                        //后续修改为存储过程
                         var stackInfo_table = Db.StackInfo_table.FirstOrDefault(s => s.StackId == _StackID && s.Status == (int)StackStatus.抓板区);
 
                         stackInfo_table.CurrentCount += 1;
 
+                        var batchinfo_table = Db.Batch_table.FirstOrDefault(s => s.BatchId == _BatchId);
+
+                        batchinfo_table.ComNum += 1;
+
                         tcClient.WriteAny(PickPartChannel, (short)0);
                         tcClient.WriteAny(PickPartFinishReqFB, false);
+
+                        Db.SaveChanges();
+
+                        StackSurplusCount = stackInfo_table.PlateAmount - stackInfo_table.CurrentCount;
 
                         //chuli view 
                         switch (about)
@@ -2006,6 +2037,10 @@ namespace StackControl
                 //tcClient.Dispose();
                 Environment.Exit(0);
             }
+            catch (AdsErrorException ex)
+            {
+
+            }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message + ":closing error");
@@ -2185,6 +2220,88 @@ namespace StackControl
             catch (Exception ex)
             {
                 return Result;
+            }
+        }
+        #endregion
+        
+        #region Send cutting pic 
+        /// <summary>
+        /// Send cutting pic 
+        /// </summary>
+        /// <param name="MachineNo"></param>
+        public void SendCutPic(int MachineNo)
+        {
+            var HPSPlateId = "";
+            int BatchIDFB = -1;
+            var _PatternFB = "";
+            int PatternFB = -1;
+            int PatternOKFB = -1;
+            int PartDataFBReset = -1;
+            TextBlock textBlock = new TextBlock();
+            try
+            {
+                switch (MachineNo)
+                {
+                    case 1:
+                        BatchIDFB = CH1BatchIDFB;
+                        PatternFB = CH1PatternFB;
+                        PatternOKFB = CH1PatternOKFB;
+                        PartDataFBReset = CH1PartDataFBReset;
+                        textBlock = hps1;
+                        break;
+                    case 2:
+                        BatchIDFB = CH2BatchIDFB;
+                        PatternFB = CH2PatternFB;
+                        PatternOKFB = CH2PatternOKFB;
+                        PartDataFBReset = CH2PartDataFBReset;
+                        textBlock = hps2;
+                        break;
+                    case 3:
+                        BatchIDFB = CH3BatchIDFB;
+                        PatternFB = CH3PatternFB;
+                        PatternOKFB = CH3PatternOKFB;
+                        PartDataFBReset = CH3PartDataFBReset;
+                        textBlock = hps3;
+                        break;
+                    case 4:
+                        BatchIDFB = CH4BatchIDFB;
+                        PatternFB = CH4PatternFB;
+                        PatternOKFB = CH4PatternOKFB;
+                        PartDataFBReset = CH4PartDataFBReset;
+                        textBlock = hps4;
+                        break;
+                    case 5:
+                        BatchIDFB = CH5BatchIDFB;
+                        PatternFB = CH5PatternFB;
+                        PatternOKFB = CH5PatternOKFB;
+                        PartDataFBReset = CH5PartDataFBReset;
+                        textBlock = hps5;
+                        break;
+                    default:
+                        break;
+                }
+
+                HPSPlateId = tcClient.ReadAny(BatchIDFB, typeof(string), new int[] { 30 }).ToString();//批次
+                _PatternFB = tcClient.ReadAny(PatternFB, typeof(string), new int[] { 30 }).ToString();//cut pic bmp
+
+                //NO1HPSPlateID = tcClient.ReadAny(BatchIDFB, typeof(string), new int[] { 30 }).ToString();//批次
+                //string _CH1PatternFB = tcClient.ReadAny(PatternFB, typeof(string), new int[] { 30 }).ToString();//锯切图编号
+
+                if (SendActivateFileToHps(MachineNo, HPSPlateId, _PatternFB))
+                {
+                    textBlock.Text = HPSPlateId + "-" + _PatternFB;
+                    tcClient.WriteAny(PatternOKFB, true);
+                }
+                tcClient.WriteAny(PartDataFBReset, false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("SendCutPic MachineNo : " + MachineNo + ex.ToString());
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    Alarmlist.Add(new Alarm() { Message = ex.Message + "SendCutPic MachineNo : " + MachineNo, Timestamp = DateTime.Now });
+
+                });
             }
         }
         #endregion
