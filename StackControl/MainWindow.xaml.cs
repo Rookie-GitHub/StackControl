@@ -119,8 +119,6 @@ namespace StackControl
         public int CH4PatternOKFB;
         public int CH5PatternOKFB;
 
-
-
         //convery status
         private bool ConCh1Status;
         private bool ConCh2Status;
@@ -142,13 +140,9 @@ namespace StackControl
         public string No5HPS;
         public string No5HPSPatrId;
         public string NO5HPSPlateID;
-
-
-
         #endregion
 
         #region logic vars
-
         SerialHelper SerialCom;
         public static MainWindow win;
         public List<string> CurrentLeftStackId = new List<string>();
@@ -175,12 +169,10 @@ namespace StackControl
         public string CurrentBatch;
         public string currentBatch;
         public bool ForceChangeBatch;
-
         public string lprebatchid = string.Empty;
         public string rprebatchid = string.Empty;
 
         public ObservableCollection<Alarm> Alarmlist = new ObservableCollection<Alarm>();
-
 
         Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
         /// <summary>
@@ -195,7 +187,6 @@ namespace StackControl
         int inTimer_PickBoard = 0;
         int inTimer_PickBoardFinish = 0;
         #endregion
-
 
         #region windows Loaded
         public MainWindow()
@@ -215,11 +206,9 @@ namespace StackControl
             //PickBoardTimer();
             //PickBoardFinishTimer();
         }
-
         #endregion
 
         #region PLC
-
         #region ConnPLC
         public void ConnPLC()
         {
@@ -411,6 +400,7 @@ namespace StackControl
         }
         #endregion
 
+        #region FirstConfigPLC
         public void FirstConfigPLC()
         {
             dataStream = new AdsStream(18); /* stream for storing the ADS state of the PLC */
@@ -436,7 +426,9 @@ namespace StackControl
             }
             #endregion
         }
+        #endregion
 
+        #region tcClient_OnNotification
         public void tcClient_OnNotification(object sender, AdsNotificationEventArgs e)
         {
             try
@@ -659,98 +651,6 @@ namespace StackControl
             }
         }
         #endregion
-
-        #region 生成锯切图neu文件到指定位置
-        /// <summary>
-        /// 生成锯切图neu文件到指定位置
-        /// </summary>
-        /// <param name="HPS">锯</param>
-        /// <param name="PartID">板件编号</param>
-        /// <param name="StackID">堆垛编号</param>
-        /// <param name="Pattern">锯切图编号</param>
-        /// <returns>成功返回true，否则false</returns>
-        private bool SendActivateFileToHps(int HPS, string SawID, string Pattern)
-        {
-            bool complete = false;
-            try
-            {
-                string PatternIP = config.AppSettings.Settings["PatternIP_" + HPS].Value;
-                string Use = config.AppSettings.Settings["PatternUsePwd_" + HPS].Value.Split(',')[0];
-                string Pwd = config.AppSettings.Settings["PatternUsePwd_" + HPS].Value.Split(',')[1];
-                string PatternGoal = config.AppSettings.Settings["PatternGoal_" + HPS].Value;
-                string FileNme = "aktplan.neu";
-
-                if (Ping(PatternIP))
-                {
-                    if (Connect(PatternIP, Use, Pwd))
-                    {
-                        if (!string.IsNullOrEmpty(Pattern) && !string.IsNullOrEmpty(SawID))
-                        {
-                            string str1 = "LAUF=\"" + SawID + "\"";
-                            string str2 = "PLAN=\"" + Pattern + "\"";
-                            string str3 = "ANZAHL=\"1\"";
-                            string str4 = "DREHENINFO=\"0\"";
-                            string str5 = "QUELLPLATZ=\"0\"";
-                            string str6 = string.Empty;
-                            string str7 = "DREHEN = 0";
-
-                            if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.err"))
-                            {
-                                //上一块板料锯切出错
-                                File.Delete(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.err");
-                            }
-                            if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.erl"))
-                            {
-                                File.Delete(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.erl");
-                            }
-
-                            if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\" + FileNme))
-                            {
-                                //上一块板料锯切未执行
-                                return false;
-                            }
-
-                            using (StreamWriter sw = new StreamWriter(@"\\" + PatternIP + @"\" + PatternGoal + @"\" + FileNme, false, Encoding.GetEncoding("gb2312")))
-                            {
-                                sw.WriteLine(str1);
-                                sw.WriteLine(str2);
-                                sw.WriteLine(str3);
-                                sw.WriteLine(str4);
-                                sw.WriteLine(str5);
-                                sw.WriteLine(str6);
-                                sw.WriteLine(str7);
-                            }
-                            if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.err"))
-                            {
-                                //上一块板料锯切出错
-                                return false;
-                            }
-
-                            complete = true;
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("Share File Open Failed: 10.16.247.30 ");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("can not Connected with 10.16.247.30 ");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message + "SendActivateFileToHps failed!");
-                App.Current.Dispatcher.Invoke(() =>
-                {
-                    Alarmlist.Add(new Alarm() { Message = ex.Message + "SendActivateFileToHps failed!", Timestamp = DateTime.Now });
-
-                });
-
-            }
-            return complete;
-        }
         #endregion
 
         #region 共享文件夹相关
@@ -932,7 +832,6 @@ namespace StackControl
         #endregion
 
         #region ScanQRCode
-
         #region ScanQRCode Connect
         /// <summary>
         /// ScanQRCode
@@ -1150,7 +1049,6 @@ namespace StackControl
         #endregion
 
         #region Pick Board Timer
-
         #region PickBoardTimer
         /// <summary>
         /// Pick Board Timer
@@ -1396,7 +1294,6 @@ namespace StackControl
             }
         }
         #endregion
-
         #endregion
 
         #region Pick Board Finish Timer
@@ -1913,7 +1810,6 @@ namespace StackControl
                 return false;
             }
         }
-
         #endregion
 
         #region EnterThePickPlateArea 板垛进入抓板区
@@ -2084,6 +1980,99 @@ namespace StackControl
 
                 });
             }
+        }
+        #endregion
+
+        #region 生成锯切图neu文件到指定位置
+        /// <summary>
+        /// 生成锯切图neu文件到指定位置
+        /// </summary>
+        /// <param name="HPS">锯</param>
+        /// <param name="PartID">板件编号</param>
+        /// <param name="StackID">堆垛编号</param>
+        /// <param name="Pattern">锯切图编号</param>
+        /// <returns>成功返回true，否则false</returns>
+        private bool SendActivateFileToHps(int HPS, string SawID, string Pattern)
+        {
+            bool complete = false;
+            try
+            {
+                string PatternIP = config.AppSettings.Settings["PatternIP_" + HPS].Value;
+                string Use = config.AppSettings.Settings["PatternUsePwd_" + HPS].Value.Split(',')[0];
+                string Pwd = config.AppSettings.Settings["PatternUsePwd_" + HPS].Value.Split(',')[1];
+                string PatternGoal = config.AppSettings.Settings["PatternGoal_" + HPS].Value;
+                string FileNme = "aktplan.neu";
+
+                if (Ping(PatternIP))
+                {
+                    if (Connect(PatternIP, Use, Pwd))
+                    {
+                        if (!string.IsNullOrEmpty(Pattern) && !string.IsNullOrEmpty(SawID))
+                        {
+                            string str1 = "LAUF=\"" + SawID + "\"";
+                            string str2 = "PLAN=\"" + Pattern + "\"";
+                            string str3 = "ANZAHL=\"1\"";
+                            string str4 = "DREHENINFO=\"0\"";
+                            string str5 = "QUELLPLATZ=\"0\"";
+                            string str6 = string.Empty;
+                            string str7 = "DREHEN = 0";
+
+                            if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.err"))
+                            {
+                                //上一块板料锯切出错
+                                File.Delete(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.err");
+                            }
+                            if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.erl"))
+                            {
+                                File.Delete(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.erl");
+                            }
+
+                            if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\" + FileNme))
+                            {
+                                //上一块板料锯切未执行
+                                return false;
+                            }
+
+                            using (StreamWriter sw = new StreamWriter(@"\\" + PatternIP + @"\" + PatternGoal + @"\" + FileNme, false, Encoding.GetEncoding("gb2312")))
+                            {
+                                sw.WriteLine(str1);
+                                sw.WriteLine(str2);
+                                sw.WriteLine(str3);
+                                sw.WriteLine(str4);
+                                sw.WriteLine(str5);
+                                sw.WriteLine(str6);
+                                sw.WriteLine(str7);
+                            }
+                            if (File.Exists(@"\\" + PatternIP + @"\" + PatternGoal + @"\aktplan.err"))
+                            {
+                                //上一块板料锯切出错
+                                return false;
+                            }
+
+                            complete = true;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Share File Open Failed: 10.16.247.30 ");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("can not Connected with 10.16.247.30 ");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message + "SendActivateFileToHps failed!");
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    Alarmlist.Add(new Alarm() { Message = ex.Message + "SendActivateFileToHps failed!", Timestamp = DateTime.Now });
+
+                });
+
+            }
+            return complete;
         }
         #endregion
         #endregion
