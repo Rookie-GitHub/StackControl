@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Untillity
+namespace Utility
 {
     /// <summary>
     /// The Status of the PlateStack
@@ -13,7 +13,9 @@ namespace Untillity
     {
         数据解析并存储完成 = 0,
         抓板区 = 1,
-        开始抓板 = 2,
-        抓板完成 = 3
+        单板开始抓板 = 2,
+        整垛开始抓板 = 2,
+        单板抓板完成 = 3,
+        整垛抓板完成 = 3
     }
 }

@@ -127,9 +127,9 @@
       <Project>{F1F0EE3D-95FA-4134-B6DC-02D79AD2C6DC}</Project>
       <Name>DTO</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Untillity\Untillity.csproj">
+    <ProjectReference Include="..\Untillity\Utility.csproj">
       <Project>{DC33FA14-0596-405C-A6E3-A4EB7D36D39E}</Project>
-      <Name>Untillity</Name>
+      <Name>Utility</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -17,7 +17,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using TwinCAT.Ads;
-using Untillity;
+using Utility;
 
 namespace StackControl
 {
@@ -1388,7 +1388,7 @@ namespace StackControl
                         int PickPart_Channel = Convert.ToInt32(tcClient.ReadAny(PickPartChannel, typeof(int)));
 
                         //先看有没有《开始抓板》状态的 ，如果有，则取批次 如果没有，看有没有在《抓板区待抓板》的，按时间正序取最早一条，
-                        var PickingStack = Db.StackInfo_table.Where(s => s.Status == (int)StackStatus.开始抓板).FirstOrDefault();
+                        var PickingStack = Db.StackInfo_table.Where(s => s.Status == (int)StackStatus.整垛开始抓板).FirstOrDefault();
 
                         if (PickingStack != null)
                         {
@@ -1566,14 +1566,17 @@ namespace StackControl
                     //清空请求
                     tcClient.WriteAny(PartDataReq, false);
 
-                    BoardInfo.Status = (int)StackStatus.开始抓板;
+                    BoardInfo.Status = (int)StackStatus.单板开始抓板;
 
-                    var StackInfo_table = Db.StackInfo_table.Where(s => s.Batch == Batch && s.StackId == StackId && s.Status == (int)StackStatus.抓板区).FirstOrDefault();
+                    #region StackIndo's Status update by trigger when the board picked finish 
+                    //StackIndo's Status update by trigger when the board picked finish 
+                    //var StackInfo_table = Db.StackInfo_table.Where(s => s.Batch == Batch && s.StackId == StackId && s.Status == (int)StackStatus.抓板区).FirstOrDefault();
 
-                    if (StackInfo_table != null)
-                    {
-                        StackInfo_table.Status = (int)StackStatus.开始抓板;
-                    }
+                    //if (StackInfo_table != null)
+                    //{
+                    //    StackInfo_table.Status = (int)StackStatus.整垛开始抓板;
+                    //}
+                    #endregion
 
                     Db.SaveChanges();
                 }
@@ -1627,30 +1630,35 @@ namespace StackControl
                     }
                     using (EDM Db = new EDM())
                     {
-
                         //找到 stack_table 中 status = 2(开始抓板) Board 
-                        var BoardInfo = Db.Stack_table.Where(s => s.Status == (int)StackStatus.开始抓板).OrderByDescending(s => s.Pos).FirstOrDefault();
+                        var BoardInfo = Db.Stack_table.Where(s => s.Status == (int)StackStatus.单板开始抓板).OrderByDescending(s => s.Pos).FirstOrDefault();
                         about = (int)BoardInfo.About;
                         int _PartID = Convert.ToInt16(BoardInfo.PartID);
                         string _StackID = BoardInfo.StackId;
                         //todo: 更新Stack_table Board Status 
                         (int Pos, int About, int BatchSurplusCount1, int StackSurplusCount1) = SqlHelper.UpdateStatus2(currentBatch, _StackID, _PartID.ToString());
-                    }
 
-                    tcClient.WriteAny(PickPartChannel, (short)0);
-                    tcClient.WriteAny(PickPartFinishReqFB, false);
+                        BoardInfo.Status = (int)StackStatus.单板抓板完成;
 
-                    //chuli view 
-                    switch (about)
-                    {
-                        case 1:
-                            this.st1Count.Text = StackSurplusCount.ToString();
-                            break;
-                        case 2:
-                            this.st2Count.Text = StackSurplusCount.ToString();
-                            break;
+                        var stackInfo_table = Db.StackInfo_table.FirstOrDefault(s => s.StackId == _StackID && s.Status == (int)StackStatus.抓板区);
+
+                        stackInfo_table.CurrentCount += 1;
+
+                        tcClient.WriteAny(PickPartChannel, (short)0);
+                        tcClient.WriteAny(PickPartFinishReqFB, false);
+
+                        //chuli view 
+                        switch (about)
+                        {
+                            case 1:
+                                this.st1Count.Text = StackSurplusCount.ToString();
+                                break;
+                            case 2:
+                                this.st2Count.Text = StackSurplusCount.ToString();
+                                break;
+                        }
+                        upe_Background(BoardInfo.Pos, 3, (int)BoardInfo.About);
                     }
-                    //upe_Background(Pos, 3, About);
                 }
                 catch (Exception ex)
                 {

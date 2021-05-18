@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Untillity
+namespace Utility
 {
     /// <summary>
     /// The status of the ScanQRCode
