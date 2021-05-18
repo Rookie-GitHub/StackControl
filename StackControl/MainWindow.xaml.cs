@@ -206,20 +206,6 @@ namespace StackControl
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            //view("062210511001020-A_1");
-            //string s = "062210511001020-A_1";
-            //using (EDM Db = new EDM())
-            //{
-            //    ScanQrCodeRecord model = new ScanQrCodeRecord()
-            //    {
-            //        StackId = s,
-            //        Status = (int)ScanQRCodeStatus.扫描完成,
-            //        ScanTime = DateTime.Now
-            //    };
-
-            //    Db.ScanQrCodeRecord.Add(model);
-            //    Db.SaveChanges();
-            //}
             Analysis("");
             this.alarm.ItemsSource = Alarmlist;
             CurrentBatch = config.AppSettings.Settings["CurrentBatchID"].Value;
@@ -244,7 +230,7 @@ namespace StackControl
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message + "Cannot connect with PLC(ConnPLC)");
+                MessageBox.Show(ex.Message + "Cannot connect with PLC(ConnPLC),please restart the app");
             }
         }
 
@@ -258,9 +244,11 @@ namespace StackControl
             heartbeat.Interval = new TimeSpan(0, 0, 0, 1, 0);
             heartbeat.Start();
         }
-        #endregion
-
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void HeartBeatCon(object sender, EventArgs e)
         {
             try
@@ -276,18 +264,21 @@ namespace StackControl
             {
                 if (!HeartBroken)
                 {
-
                     App.Current.Dispatcher.Invoke(() =>
                     {
                         Alarmlist.Add(new Alarm() { Message = ex.Message, Timestamp = DateTime.Now });
 
                     });
                     HeartBroken = true;
-
                 }
             }
         }
+        #endregion
 
+        #region ConfigPLcTags
+        /// <summary>
+        /// 加载PLC Tags
+        /// </summary>
         public void ConfigPLCTags()
         {
             try
@@ -396,6 +387,18 @@ namespace StackControl
 
                 Console.WriteLine("notification done!");
             }
+            catch (AdsErrorException adsEx)
+            {
+                if (adsEx.ToString().Contains("Timeout"))
+                {
+                    //log
+                }
+                else
+                {
+                    tcClient.Dispose();
+                    MessageBox.Show("ConfigPLCTags Failed , plrease restart the app");
+                }
+            }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message + "-notification err!");
@@ -406,6 +409,7 @@ namespace StackControl
                 });
             }
         }
+        #endregion
 
         public void FirstConfigPLC()
         {
@@ -462,21 +466,6 @@ namespace StackControl
                     if (binRead.ReadBoolean())
                     {
                         EnterThePickPlateArea((int)PlatesChannel.左侧);
-                        #region 原代码 注释掉
-                        //(string StackId, string BatchId) = SqlHelper.update_StackStatus((int)PlatesChannel.左侧);
-                        //if (!string.IsNullOrWhiteSpace(StackId) && !string.IsNullOrWhiteSpace(BatchId))
-                        //{
-                        //    tcClient.WriteAny(LeftPartInWork, false);
-                        //    //更新堆垛使用情况
-                        //    view(StackId);
-                        //    //更新堆垛id
-                        //    st1.Text = StackId;
-                        //    //更新批次id
-                        //    st3.Text = BatchId;
-                        //    //更新进料状态
-                        //    st5.Fill = new SolidColorBrush(Colors.Yellow);
-                        //}
-                        #endregion
                     }
                 }
                 else if (e.NotificationHandle == RightPart_InWorkInt)
@@ -484,22 +473,6 @@ namespace StackControl
                     if (binRead.ReadBoolean())
                     {
                         EnterThePickPlateArea((int)PlatesChannel.右侧);
-
-                        #region 原代码 注释掉
-                        //(string StackId, string BatchId) = SqlHelper.update_StackStatus(2);
-                        //if (!string.IsNullOrWhiteSpace(StackId) && !string.IsNullOrWhiteSpace(BatchId))
-                        //{
-                        //    tcClient.WriteAny(LeftPartInWork, false);
-                        //    //更新堆垛使用情况
-                        //    view(StackId);
-                        //    //更新堆垛id
-                        //    st2.Text = StackId;
-                        //    //更新批次id
-                        //    st4.Text = BatchId;
-                        //    //更新进料状态
-                        //    st6.Fill = new SolidColorBrush(Colors.Yellow);
-                        //}
-                        #endregion
                     }
                 }
                 #endregion
@@ -532,125 +505,9 @@ namespace StackControl
                 //{
                 //    if (binRead.ReadBoolean())
                 //    {
-                //        int About = -1;
-                //        int PickPart_Channel = Convert.ToInt32(tcClient.ReadAny(PickPartChannel, typeof(int)));
-                //        if (PickPart_Channel == 99)
-                //        {
-                //            //确定当前批次
-                //            currentBatch = SqlHelper.CheckCurrentBatch();
-                //            if (!string.IsNullOrEmpty(currentBatch))
-                //            {
-
-                //                About = SqlHelper.ExistCurrentBatch(currentBatch);
-                //                //工作区是否有当前批次判断
-                //                if (About > 0)
-                //                {
-                //                    //有当前批次,给plc通道号
-                //                    (int curBatchNum, int tolBatchNum) = SqlHelper.QueryBatchQuantity(currentBatch);
-                //                    if (curBatchNum <= tolBatchNum - 3)
-                //                    {
-                //                        SendData(About, 1, 2, 3, 4, 5);
-                //                    }
-                //                    else
-                //                    {
-                //                        SendData(About, 1, 2, 3, 0, 0);
-                //                    }
-                //                }
-                //                else
-                //                {
-                //                    //没有当前批次
-                //                    //等待当前批次，或者强制更新为其他批次
-                //                    while (!ForceChangeBatch)
-                //                    {
-                //                        Thread.Sleep(200);
-                //                        About = SqlHelper.ExistCurrentBatch(currentBatch);
-                //                        if (About > 0)
-                //                        {
-                //                            //有当前批次,给plc通道号
-                //                            (int curBatchNum, int tolBatchNum) = SqlHelper.QueryBatchQuantity(currentBatch);
-                //                            if (curBatchNum <= tolBatchNum - 3)
-                //                            {
-                //                                SendData(About, 1, 2, 3, 4, 5);
-                //                            }
-                //                            else
-                //                            {
-                //                                SendData(About, 1, 2, 3, 0, 0);
-                //                            }
-                //                            break;
-                //                        }
-                //                    }
-                //                    if (ForceChangeBatch)
-                //                    {
-                //                        SqlHelper.Update_BatchStatus(currentBatch, 2);
-                //                        currentBatch = SqlHelper.CheckCurrentBatch();
-                //                        About = SqlHelper.ExistCurrentBatch(currentBatch);
-                //                        if (About > 0)
-                //                        {
-                //                            (int curBatchNum, int tolBatchNum) = SqlHelper.QueryBatchQuantity(currentBatch);
-                //                            if (curBatchNum <= tolBatchNum - 3)
-                //                            {
-                //                                SendData(About, 1, 2, 3, 4, 5);
-                //                            }
-                //                            else
-                //                            {
-                //                                SendData(About, 1, 2, 3, 0, 0);
-                //                            }
-                //                        }
-                //                    }
-                //                }
-                //            }
-
-                //        }
-                //        else if (PickPart_Channel == 1 || PickPart_Channel == 2)
-                //        {
-                //            currentBatch = SqlHelper.CheckCurrentBatch();
-                //            (int curBatchNum, int tolBatchNum) = SqlHelper.QueryBatchQuantity(currentBatch);
-                //            if (curBatchNum == tolBatchNum)
-                //            {
-                //                tcClient.WriteAny(Path, (short)88);
-                //                tcClient.WriteAny(PartDataReq, false);
-                //            }
-                //            else if (curBatchNum <= tolBatchNum - 3)
-                //            {
-                //                SendData(PickPart_Channel, 1, 2, 3, 4, 5);
-                //            }
-                //            else
-                //            {
-                //                SendData(PickPart_Channel, 1, 2, 3, 0, 0);
-                //            }
-                //        }
-
-                //        //给plc发送新批次信息
-                //        if (!Equals(CurrentBatch, currentBatch) && !string.IsNullOrWhiteSpace(currentBatch))
-                //        {
-                //            //给plc发送新批次信息
-                //            tcClient.WriteAny(NewBatchID, currentBatch, new int[] { 30 });
-                //            tcClient.WriteAny(NewBatchIDReady, true);
-                //        }
-
-                //        CurrentBatch = currentBatch;
-                //    }
-
+                //        
+                //     }
                 //}
-
-                //else if (e.NotificationHandle == PickPartFinishReqInt)
-                //{
-                //    if (binRead.ReadBoolean())
-                //    {
-                //        currentBatch = SqlHelper.CheckCurrentBatch();
-                //        int about = SqlHelper.ExistCurrentBatch(currentBatch);
-                //        DataTable DT = basic.SqlHelper.GetBoardDeatail(about);
-                //        int _PartID = Convert.ToInt16(DT.Rows[0][4]);
-                //        string _StackID = DT.Rows[0][6].ToString();
-                //        (int Pos, int About) = SqlHelper.UpdateStatus2(currentBatch, _StackID, _PartID.ToString());
-                //        Thread.Sleep(100);
-                //        upe_Background(Pos, 3, About);
-
-                //        tcClient.WriteAny(PickPartChannel, (short)0);
-                //        tcClient.WriteAny(PickPartFinishReqFB, false);
-                //    }
-                //}
-
                 #endregion
 
                 #region Get plate info before to HPS
@@ -662,17 +519,6 @@ namespace StackControl
                         Thread.Sleep(100);
 
                         SendCutPic((int)CuttingMachineNo.一号锯);
-
-                        #region 原代码注释掉
-                        //NO1HPSPlateID = tcClient.ReadAny(CH1BatchIDFB, typeof(string), new int[] { 30 }).ToString();//批次
-                        //string _CH1PatternFB = tcClient.ReadAny(CH1PatternFB, typeof(string), new int[] { 30 }).ToString();       //锯切图编号
-                        //if (SendActivateFileToHps(1, NO1HPSPlateID, _CH1PatternFB))
-                        //{
-                        //    hps1.Text = NO1HPSPlateID + "-" + _CH1PatternFB;
-                        //    tcClient.WriteAny(CH1PatternOKFB, true);
-                        //}
-                        //tcClient.WriteAny(CH1PartDataFBReset, false);
-                        #endregion
                     }
                 }
                 else if (e.NotificationHandle == CH2PartDataFBInt)
@@ -682,85 +528,35 @@ namespace StackControl
                         Thread.Sleep(100);
 
                         SendCutPic((int)CuttingMachineNo.二号锯);
-
-                        #region 原代码注释掉
-                        //NO2HPSPlateID = tcClient.ReadAny(CH2BatchIDFB, typeof(string), new int[] { 30 }).ToString();
-                        //string _CH2PatternFB = tcClient.ReadAny(CH2PatternFB, typeof(string), new int[] { 30 }).ToString();
-                        //if (SendActivateFileToHps(2, NO2HPSPlateID, _CH2PatternFB))
-                        //{
-                        //    hps2.Text = NO2HPSPlateID + "-" + _CH2PatternFB;
-                        //    tcClient.WriteAny(CH2PatternOKFB, true);
-                        //}
-
-                        //tcClient.WriteAny(CH2PartDataFBReset, false);
-                        #endregion
                     }
                 }
                 else if (e.NotificationHandle == CH3PartDataFBInt)
                 {
                     if (binRead.ReadBoolean())
                     {
-
                         Thread.Sleep(100);
 
                         SendCutPic((int)CuttingMachineNo.三号锯);
-
-                        #region 原代码注释掉
-                        //NO3HPSPlateID = tcClient.ReadAny(CH3BatchIDFB, typeof(string), new int[] { 30 }).ToString();
-                        //string _CH3PatternFB = tcClient.ReadAny(CH3PatternFB, typeof(string), new int[] { 30 }).ToString();
-                        //if (SendActivateFileToHps(3, NO3HPSPlateID, _CH3PatternFB))
-                        //{
-                        //    hps3.Text = NO3HPSPlateID + "-" + _CH3PatternFB;
-                        //    tcClient.WriteAny(CH3PatternOKFB, true);
-                        //}
-                        //tcClient.WriteAny(CH3PartDataFBReset, false);
-                        #endregion
                     }
                 }
                 else if (e.NotificationHandle == CH4PartDataFBInt)
                 {
                     if (binRead.ReadBoolean())
                     {
-
                         Thread.Sleep(100);
 
                         SendCutPic((int)CuttingMachineNo.四号锯);
-
-                        #region 原代码注释掉
-                        //NO4HPSPlateID = tcClient.ReadAny(CH4BatchIDFB, typeof(string), new int[] { 30 }).ToString();
-                        //string _CH4PatternFB = tcClient.ReadAny(CH4PatternFB, typeof(string), new int[] { 30 }).ToString();
-                        //if (SendActivateFileToHps(4, NO4HPSPlateID, _CH4PatternFB))
-                        //{
-                        //    hps4.Text = NO4HPSPlateID + "-" + _CH4PatternFB;
-                        //    tcClient.WriteAny(CH4PatternOKFB, true);
-                        //}
-                        //tcClient.WriteAny(CH4PartDataFBReset, false);
-                        #endregion
                     }
                 }
                 else if (e.NotificationHandle == CH5PartDataFBInt)
                 {
                     if (binRead.ReadBoolean())
                     {
-
                         Thread.Sleep(100);
 
                         SendCutPic((int)CuttingMachineNo.五号锯);
-
-                        #region 原代码注释掉
-                        //NO5HPSPlateID = tcClient.ReadAny(CH5BatchIDFB, typeof(string), new int[] { 30 }).ToString();
-                        //string _CH5StackIDFB = tcClient.ReadAny(CH5StackIDFB, typeof(string), new int[] { 30 }).ToString();
-                        //string _CH5PatternFB = tcClient.ReadAny(CH5PatternFB, typeof(string), new int[] { 30 }).ToString();
-                        //if (SendActivateFileToHps(5, NO5HPSPlateID, _CH5PatternFB))
-                        //{
-                        //    hps5.Text = NO5HPSPlateID + "-" + _CH5PatternFB;
-                        //    tcClient.WriteAny(CH5PatternOKFB, true);
-                        //}
-                        //tcClient.WriteAny(CH5PartDataFBReset, false);
-                        #endregion
                     }
                 }
-
                 #endregion
 
                 #region scanner
@@ -848,6 +644,10 @@ namespace StackControl
                 }
                 #endregion
             }
+            catch (AdsErrorException adsEx)
+            {
+
+            }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message + ": tcClient_OnNotification Error!");
@@ -858,7 +658,6 @@ namespace StackControl
                 });
             }
         }
-
         #endregion
 
         #region 生成锯切图neu文件到指定位置
@@ -913,14 +712,6 @@ namespace StackControl
 
                             using (StreamWriter sw = new StreamWriter(@"\\" + PatternIP + @"\" + PatternGoal + @"\" + FileNme, false, Encoding.GetEncoding("gb2312")))
                             {
-                                //for (int i = 8; i > 0; i--)
-                                //{
-                                //    switch (i)
-                                //    {
-                                //        case 7:
-                                //            break;
-                                //    }
-                                //}
                                 sw.WriteLine(str1);
                                 sw.WriteLine(str2);
                                 sw.WriteLine(str3);
@@ -937,7 +728,6 @@ namespace StackControl
 
                             complete = true;
                         }
-                        //Disconnect(PatternIP, Use, Pwd);
                     }
                     else
                     {
@@ -1268,8 +1058,6 @@ namespace StackControl
 
                             Db.Stack_table.AddRange(Stack_tables);
 
-                            //basic.SqlHelper.Insert_Stack_table(stackModel);
-
                             /*Stack_Table(DetailInfo) Inserted Finish , then Insert the StackInfo to the table of StackInfo*/
                             StackInfo_table stackInfo_Table = new StackInfo_table
                             {
@@ -1346,15 +1134,10 @@ namespace StackControl
 
                                 Db.Batch_table.Add(batch_Table);
 
-                                //string BatchId = BatchInfo[0].Substring(0, BatchInfo[0].Split('.')[0].LastIndexOf('_'));
-                                //int BatchNum = Convert.ToInt32(BatchInfo[0].Split(',')[1]);
-                                //basic.SqlHelper.Insert_Batch_table(BatchId, BatchNum);
-
                                 File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme_All);
                             }
                             Db.SaveChanges();
                         }
-                        //Disconnect(Getcsv_IP, Use, Pwd);
                     }
                 }
             }
@@ -1678,7 +1461,6 @@ namespace StackControl
 
                         StackSurplusCount = stackInfo_table.PlateAmount - stackInfo_table.CurrentCount;
 
-                        //chuli view 
                         switch (about)
                         {
                             case 1:
@@ -2065,7 +1847,6 @@ namespace StackControl
         #endregion
 
         #region Fun
-
         #region Req_PutOnThePlates 上料请求
         /// <summary>
         /// Req_PutOnThePlates 上料请求
@@ -2223,7 +2004,7 @@ namespace StackControl
             }
         }
         #endregion
-        
+
         #region Send cutting pic 
         /// <summary>
         /// Send cutting pic 
