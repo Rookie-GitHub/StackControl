@@ -428,7 +428,7 @@ namespace StackControl
         }
         #endregion
 
-        #region tcClient_OnNotification
+        #region tcClient_OnNotification 订阅事件,获取Plc value 变化
         public void tcClient_OnNotification(object sender, AdsNotificationEventArgs e)
         {
             try
@@ -507,7 +507,6 @@ namespace StackControl
                 {
                     if (binRead.ReadBoolean())
                     {
-
                         Thread.Sleep(100);
 
                         SendCutPic((int)CuttingMachineNo.一号锯);
@@ -556,82 +555,14 @@ namespace StackControl
                 {
                     if (binRead.ReadBoolean())
                     {
-                        string leftScanner = tcClient.ReadAny(leftUPI, typeof(String), new int[] { 50 }).ToString();
-                        (string CurBatchID, int ret) = basic.SqlHelper.CheckNewBatchBoard(leftScanner);
-                        if (!(Equals(CurBatchID, string.Empty)))
-                        {
-                            if (!Equals(CurBatchID, lprebatchid))
-                            {
-                                tcClient.WriteAny(LeftRedLightFB, true);
-                                tcClient.WriteAny(LeftGreenLightFB, false);
-                                tcClient.WriteAny(LeftYellowLightFB, false);
-
-                            }
-                            else if (Equals(CurBatchID, lprebatchid) && !Equals(CurBatchID, string.Empty))
-                            {
-                                tcClient.WriteAny(LeftGreenLightFB, true);
-                                tcClient.WriteAny(LeftRedLightFB, false);
-                                tcClient.WriteAny(LeftYellowLightFB, false);
-                            }
-                            else if (ret == 1)
-                            {
-                                tcClient.WriteAny(LeftRedLightFB, false);
-                                tcClient.WriteAny(LeftYellowLightFB, true);
-                                tcClient.WriteAny(LeftGreenLightFB, true);
-                            }
-                            lprebatchid = CurBatchID;
-
-                        }
-                        else
-                        {
-                            tcClient.WriteAny(LeftRedLightFB, true);
-                            tcClient.WriteAny(LeftYellowLightFB, true);
-                            tcClient.WriteAny(LeftGreenLightFB, true);
-
-                        }
-                        Thread.Sleep(100);
-                        tcClient.WriteAny(ReqLeftUPI, false);
+                        ScanBoardsHandle((int)ScanStation.左侧下层出料口);
                     }
                 }
                 else if (e.NotificationHandle == RightScanDataReqInt)
                 {
                     if (binRead.ReadBoolean())
                     {
-                        string rightScanner = tcClient.ReadAny(RightUPI, typeof(String), new int[] { 50 }).ToString();
-                        (string CurBatchID, int ret) = basic.SqlHelper.CheckNewBatchBoard(rightScanner);
-
-                        if (!(Equals(CurBatchID, string.Empty)))
-                        {
-                            if (!Equals(CurBatchID, rprebatchid))
-                            {
-                                tcClient.WriteAny(RightRedLightFB, true);
-                                tcClient.WriteAny(RightGreenLightFB, false);
-                                tcClient.WriteAny(RightYellowLightFB, false);
-
-                            }
-                            else if (Equals(CurBatchID, rprebatchid) && !Equals(CurBatchID, string.Empty))
-                            {
-                                tcClient.WriteAny(RightGreenLightFB, true);
-                                tcClient.WriteAny(RightRedLightFB, false);
-                                tcClient.WriteAny(RightYellowLightFB, false);
-                            }
-                            else if (ret == 1)
-                            {
-                                tcClient.WriteAny(RightRedLightFB, false);
-                                tcClient.WriteAny(RightYellowLightFB, true);
-                                tcClient.WriteAny(RightGreenLightFB, true);
-                            }
-                            rprebatchid = CurBatchID;
-
-                        }
-                        else
-                        {
-                            tcClient.WriteAny(RightRedLightFB, true);
-                            tcClient.WriteAny(RightYellowLightFB, true);
-                            tcClient.WriteAny(RightGreenLightFB, true);
-                        }
-                        Thread.Sleep(100);
-                        tcClient.WriteAny(ReqRightUPI, false);
+                        ScanBoardsHandle((int)ScanStation.右侧上层出料口);
                     }
                 }
                 #endregion
@@ -1001,7 +932,9 @@ namespace StackControl
                                         BatchId = BatchOfStack,
                                         Upi = s.Split(',')[2],
                                         Array = Convert.ToInt32(s.Split(',')[1]),
-                                        Status = (int)BoardScanStatus.未扫描
+                                        Status = (int)BoardScanStatus.未扫描,
+                                        Station = 0,
+                                        ScanTime = null
                                     };
 
                                     board_Tables.Add(board_Table);
@@ -1095,7 +1028,7 @@ namespace StackControl
                         if (PickingStack != null)
                         {
                             currentStackId = PickingStack.StackId;
-                            About = PickingStack.About;
+                            About = (int)PickingStack.About;
                             currentStackNum = PickingStack.CurrentCount;
                             AmountStackNum = PickingStack.PlateAmount;
                             currentBatch = PickingStack.Batch;
@@ -1107,7 +1040,7 @@ namespace StackControl
                             if (WaitPickStack != null)
                             {
                                 currentStackId = WaitPickStack.StackId;
-                                About = WaitPickStack.About;
+                                About = (int)WaitPickStack.About;
                                 currentStackNum = WaitPickStack.CurrentCount;
                                 AmountStackNum = WaitPickStack.PlateAmount;
                                 currentBatch = PickingStack.Batch;
@@ -2074,6 +2007,95 @@ namespace StackControl
             }
             return complete;
         }
+        #endregion
+
+        #region ScanBoards
+        public void ScanBoardsHandle(int Station)
+        {
+            string ScannerUpi = "";
+            int ScannerLorR = -1;
+            int RedLightFB = -1;
+            int GreenLightFB = -1;
+            int YellowLightFB = -1;
+            int ReqUpi = -1;
+            try
+            {
+                switch (Station)
+                {
+                    case 1:
+                        ScannerLorR = leftUPI;
+                        RedLightFB = LeftRedLightFB;
+                        GreenLightFB = LeftGreenLightFB;
+                        YellowLightFB = LeftYellowLightFB;
+                        ReqUpi = ReqLeftUPI;
+                        break;
+                    case 2:
+                        ScannerLorR = RightUPI;
+                        RedLightFB = RightRedLightFB;
+                        GreenLightFB = RightGreenLightFB;
+                        YellowLightFB = RightYellowLightFB;
+                        ReqUpi = ReqRightUPI;
+                        break;
+                }
+                ScannerUpi = tcClient.ReadAny(ScannerLorR, typeof(String), new int[] { 50 }).ToString();
+
+                using (EDM Db = new EDM())
+                {
+                    var BatchBoardsInfo = Db.Board_table.FirstOrDefault(s => s.Upi == ScannerUpi);
+
+                    var BoardBatchId = BatchBoardsInfo.BatchId;
+
+                    BatchBoardsInfo.Status = 1;
+                    BatchBoardsInfo.Station = Station;
+                    BatchBoardsInfo.ScanTime = DateTime.Now;
+
+                    Db.SaveChanges();
+
+                    if (!(Equals(BoardBatchId, string.Empty)))
+                    {
+                        if (!Equals(BoardBatchId, lprebatchid))
+                        {
+                            tcClient.WriteAny(RedLightFB, true);
+                            tcClient.WriteAny(GreenLightFB, false);
+                            tcClient.WriteAny(YellowLightFB, false);
+
+                        }
+                        else if (Equals(BoardBatchId, lprebatchid) && !Equals(BoardBatchId, string.Empty))
+                        {
+                            tcClient.WriteAny(RedLightFB, false);
+                            tcClient.WriteAny(GreenLightFB, true);
+                            tcClient.WriteAny(YellowLightFB, false);
+                        }
+                    }
+                    else
+                    {
+                        tcClient.WriteAny(RedLightFB, true);
+                        tcClient.WriteAny(GreenLightFB, true);
+                        tcClient.WriteAny(YellowLightFB, true);
+                    }
+
+                    var NotScanCount = Db.Board_table.Where(s => s.Status == 0 && s.BatchId == BoardBatchId).Count();
+
+                    if (NotScanCount == 0)
+                    {
+                        tcClient.WriteAny(RedLightFB, false);
+                        tcClient.WriteAny(GreenLightFB, true);
+                        tcClient.WriteAny(YellowLightFB, true);
+                    }
+                }
+
+                tcClient.WriteAny(ReqUpi, false);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("ScanBoardsHandle Station :" + Station + ex.ToString());
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    Alarmlist.Add(new Alarm() { Message = ex.Message + "ScanBoardsHandle Station : " + Station, Timestamp = DateTime.Now });
+                });
+            }
+        }
+
         #endregion
         #endregion
     }

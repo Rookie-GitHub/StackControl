@@ -21,5 +21,9 @@ namespace DTO.EDM
         public string Upi { get; set; }
 
         public int? Status { get; set; }
+
+        public int? Station { get; set; }
+
+        public DateTime? ScanTime { get; set; }
     }
 }

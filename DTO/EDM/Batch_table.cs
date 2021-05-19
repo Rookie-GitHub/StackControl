@@ -21,5 +21,7 @@ namespace DTO.EDM
         public int Status { get; set; }
 
         public DateTime DateTime { get; set; }
+
+        public DateTime? EndTime { get; set; }
     }
 }

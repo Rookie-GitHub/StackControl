@@ -18,7 +18,7 @@ namespace DTO.EDM
         [StringLength(50)]
         public string Batch { get; set; }
 
-        public int About { get; set; }
+        public int? About { get; set; }
 
         public int PlateAmount { get; set; }
 
