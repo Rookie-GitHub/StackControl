@@ -127,7 +127,7 @@
       <Project>{F1F0EE3D-95FA-4134-B6DC-02D79AD2C6DC}</Project>
       <Name>DTO</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Untillity\Utility.csproj">
+    <ProjectReference Include="..\Utility\Utility.csproj">
       <Project>{dc33fa14-0596-405c-a6e3-a4eb7d36d39e}</Project>
       <Name>Utility</Name>
     </ProjectReference>

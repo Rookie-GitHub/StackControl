@@ -44,11 +44,14 @@
     <Compile Include="Enum\BatchStatus.cs" />
     <Compile Include="Enum\BoardScanStatus.cs" />
     <Compile Include="Enum\CuttingMachineNo.cs" />
+    <Compile Include="Enum\LogMark.cs" />
     <Compile Include="Enum\ScanStation.cs" />
     <Compile Include="Enum\PlatesChannel.cs" />
     <Compile Include="Enum\ScanQRCodeStatus.cs" />
     <Compile Include="Enum\StackStatus.cs" />
+    <Compile Include="File\FileHandle.cs" />
     <Compile Include="Globle.cs" />
+    <Compile Include="Log\LogHandle.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
