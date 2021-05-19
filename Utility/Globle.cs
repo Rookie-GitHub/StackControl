@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Utility
@@ -11,7 +12,6 @@ namespace Utility
     /// </summary>
     public static class Globle
     {
-
-
+        public static Mutex logMutex = new Mutex();
     }
 }
