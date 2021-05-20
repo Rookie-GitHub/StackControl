@@ -1391,6 +1391,7 @@ namespace StackControl
         #region Timer
 
         #region Pick Board Timer
+
         #region PickBoardTimer
         /// <summary>
         /// Pick Board Timer
@@ -1509,12 +1510,14 @@ namespace StackControl
                             //there is dont have currentBatch , Close the request 
                             tcClient.WriteAny(PartDataReq, false);
                             Console.WriteLine("There is no board to pick！");
+                            LogHandle.WriteLog_Info((int)LogMark.抓板区, "There is no board to pick！");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
+                    LogHandle.WriteLog_Info((int)LogMark.抓板区, ex.Message);
                 }
                 finally
                 {
@@ -1638,6 +1641,7 @@ namespace StackControl
             }
         }
         #endregion
+
         #endregion
 
         #region Pick Board Finish Timer
@@ -1807,7 +1811,9 @@ namespace StackControl
         }
 
         #endregion
+
         #endregion
+
         #endregion
 
         #region Fun
@@ -2263,7 +2269,7 @@ namespace StackControl
 
                     Db.SaveChanges();
 
-                    if (!(Equals(BoardBatchId, string.Empty)))
+                    if (!string.IsNullOrWhiteSpace(BoardBatchId))
                     {
                         if (!Equals(BoardBatchId, lprebatchid))
                         {
@@ -2271,7 +2277,7 @@ namespace StackControl
                             tcClient.WriteAny(GreenLightFB, false);
                             tcClient.WriteAny(YellowLightFB, false);
                         }
-                        else if (Equals(BoardBatchId, lprebatchid) && !Equals(BoardBatchId, string.Empty))
+                        else
                         {
                             tcClient.WriteAny(RedLightFB, false);
                             tcClient.WriteAny(GreenLightFB, true);
