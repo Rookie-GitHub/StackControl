@@ -1036,7 +1036,7 @@ namespace StackControl
             {
                 var stack_table = Db.Stack_table.Where(s => s.StackId == StackId).ToList();
 
-                if (stack_table == null)
+                if (stack_table.Count <= 0)
                 {
                     return;
                 }
@@ -1048,7 +1048,6 @@ namespace StackControl
                     About = (int)s.About;
                     upe_Background(Pos, Status, About);
                 });
-
 
                 switch (About)
                 {
@@ -1214,7 +1213,7 @@ namespace StackControl
         public void upe_Background(Border border, int status)
         {
             if (status == 1)
-                border.Dispatcher.Invoke(new Action(() => { border.Background = new SolidColorBrush(Colors.Blue); }));
+                border.Dispatcher.Invoke(new Action(() => { border.Background = new SolidColorBrush(Colors.Yellow); }));
             //border.Background = new SolidColorBrush(Colors.Green);
             else if (status == 2)
                 border.Dispatcher.Invoke(new Action(() => { border.Background = new SolidColorBrush(Colors.Green); }));
@@ -1692,7 +1691,7 @@ namespace StackControl
                         BoardInfo.Status = (int)StackStatus.单板抓板完成;
 
                         //后续修改为存储过程
-                        var stackInfo_table = Db.StackInfo_table.FirstOrDefault(s => s.StackId == _StackID && s.Status == (int)StackStatus.抓板区);
+                        var stackInfo_table = Db.StackInfo_table.FirstOrDefault(s => s.StackId == _StackID);
 
                         stackInfo_table.CurrentCount += 1;
 
@@ -1852,6 +1851,10 @@ namespace StackControl
                         //更新Stack_table
                         var stack_Table = Db.Stack_table.Where(s => s.StackId == StackInfo.StackId).ToList();
 
+                        if (stack_Table.Count <= 0)
+                        {
+                            return false;
+                        }
                         stack_Table.ForEach(s =>
                         {
                             s.About = 1;
@@ -1916,7 +1919,7 @@ namespace StackControl
                     //Get the Stack Infomation Which Status equals 1
                     var stack_Table = Db.Stack_table.Where(s => s.Status == (int)StackStatus.数据解析并存储完成 && s.About == About).ToList();
 
-                    if (stack_Table == null)
+                    if (stack_Table.Count <= 0)
                     {
                         MessageBox.Show("About : " + About + " There is no Stack Infomation , Please check the system!");
                         return false;
