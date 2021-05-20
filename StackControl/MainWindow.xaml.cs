@@ -199,8 +199,8 @@ namespace StackControl
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            //EnterThePickPlateArea(1);
             //SendCutPic(1);
-            RightScanBoardsTimer();
             //Analysis("062210511001020-A_1");
             this.alarm.ItemsSource = Alarmlist;
             CurrentBatch = config.AppSettings.Settings["CurrentBatchID"].Value;
@@ -208,7 +208,9 @@ namespace StackControl
             //ScanQRCode();
             //FirstConfigPLC();
             //PickBoardTimer();
-            //PickBoardFinishTimer();
+            PickBoardFinishTimer();
+            //LeftScanBoardsTimer();
+            //RightScanBoardsTimer();
         }
         #endregion
 
@@ -1014,10 +1016,10 @@ namespace StackControl
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void Window_ContentRendered(object sender, EventArgs e)
-        {
-            view();
-        }
+        //private void Window_ContentRendered(object sender, EventArgs e)
+        //{
+        //    //view();
+        //}
         #endregion
 
         #region Load View Data
@@ -1027,29 +1029,42 @@ namespace StackControl
         /// <param name="StackId"></param>
         public void view(string StackId = "")
         {
-            DataTable dataTable = basic.SqlHelper.Get_WorkStack(StackId);
-            foreach (DataRow dr in dataTable.Rows)
+            int Pos = -1;
+            int Status = -1;
+            int About = -1;
+            using (EDM Db = new EDM())
             {
-                int Pos = Convert.ToInt32(dr[0]);       //序号
-                int Status = Convert.ToInt32(dr[1]);    //状态
-                int About = Convert.ToInt32(dr[2]);     //左右
-                upe_Background(Pos, Status, About);
-            }
+                var stack_table = Db.Stack_table.Where(s => s.StackId == StackId).ToList();
 
-            DataTable dataTable1 = basic.SqlHelper.Get_WorkId();
-            foreach (DataRow dr in dataTable1.Rows)
-            {
-                if (Convert.ToInt32(dr[2]) == 1)
+                if (stack_table == null)
                 {
-                    st1.Text = dr[0].ToString();                    //更新堆垛id
-                    st3.Text = dr[1].ToString();                    //更新批次id
-                    st5.Fill = new SolidColorBrush(Colors.Green);     //更新进料状态
+                    return;
                 }
-                if (Convert.ToInt32(dr[2]) == 2)
+
+                stack_table.ForEach(s =>
                 {
-                    st2.Text = dr[0].ToString();
-                    st4.Text = dr[1].ToString();
-                    st6.Fill = new SolidColorBrush(Colors.Green);
+                    Pos = s.Pos;
+                    Status = (int)s.Status;
+                    About = (int)s.About;
+                    upe_Background(Pos, Status, About);
+                });
+
+
+                switch (About)
+                {
+                    case 1:
+                        //更新堆垛id
+                        st1.Text = stack_table.FirstOrDefault().StackId;
+                        //更新批次id
+                        st3.Text = stack_table.FirstOrDefault().Batch;
+                        //更新进料状态
+                        st5.Fill = new SolidColorBrush(Colors.Green);
+                        break;
+                    case 2:
+                        st2.Text = stack_table.FirstOrDefault().StackId;
+                        st4.Text = stack_table.FirstOrDefault().Batch;
+                        st6.Fill = new SolidColorBrush(Colors.Green);
+                        break;
                 }
             }
         }
@@ -1198,10 +1213,15 @@ namespace StackControl
         /// <param name="status">状态</param>
         public void upe_Background(Border border, int status)
         {
-            if (status == 2)
-                border.Background = new SolidColorBrush(Colors.Green);
+            if (status == 1)
+                border.Dispatcher.Invoke(new Action(() => { border.Background = new SolidColorBrush(Colors.Blue); }));
+            //border.Background = new SolidColorBrush(Colors.Green);
+            else if (status == 2)
+                border.Dispatcher.Invoke(new Action(() => { border.Background = new SolidColorBrush(Colors.Green); }));
+            //border.Background = new SolidColorBrush(Colors.Blue);
             else if (status == 3)
-                border.Background = new SolidColorBrush(Colors.White);
+                border.Dispatcher.Invoke(new Action(() => { border.Background = new SolidColorBrush(Colors.White); }));
+            //border.Background = new SolidColorBrush(Colors.White);
 
             if (border == A40 && status == 3)
             {
@@ -1210,7 +1230,8 @@ namespace StackControl
                 //更新批次id
                 st3.Text = "";
                 //更新进料状态
-                st5.Fill = new SolidColorBrush(Colors.Yellow);
+                //st5.Fill = new SolidColorBrush(Colors.Yellow);
+                st5.Dispatcher.Invoke(new Action(() => { st5.Fill = new SolidColorBrush(Colors.Yellow); }));
             }
             if (border == B40 && status == 3)
             {
@@ -1219,7 +1240,8 @@ namespace StackControl
                 //更新批次id
                 st4.Text = "";
                 //更新进料状态
-                st6.Fill = new SolidColorBrush(Colors.Yellow);
+                //st6.Fill = new SolidColorBrush(Colors.Yellow);
+                st6.Dispatcher.Invoke(new Action(() => { st6.Fill = new SolidColorBrush(Colors.Yellow); }));
             }
         }
         #endregion
@@ -1368,6 +1390,7 @@ namespace StackControl
         #endregion
 
         #region Timer
+
         #region Pick Board Timer
         #region PickBoardTimer
         /// <summary>
@@ -1430,14 +1453,14 @@ namespace StackControl
                                 About = (int)WaitPickStack.About;
                                 currentStackNum = WaitPickStack.CurrentCount;
                                 AmountStackNum = WaitPickStack.PlateAmount;
-                                currentBatch = PickingStack.Batch;
+                                currentBatch = WaitPickStack.Batch;
                             }
                         }
 
                         if (!string.IsNullOrWhiteSpace(currentStackId) && About != -1)
                         {
                             //send message about new btach 
-                            if (!Equals(CurrentBatch, currentBatch) && !string.IsNullOrWhiteSpace(currentBatch))
+                            if (!Equals(CurrentBatch, currentBatch) && !string.IsNullOrWhiteSpace(currentBatch) && !string.IsNullOrWhiteSpace(CurrentBatch))
                             {
                                 tcClient.WriteAny(NewBatchID, currentBatch, new int[] { 30 });
                                 tcClient.WriteAny(NewBatchIDReady, true);
@@ -1516,7 +1539,7 @@ namespace StackControl
         {
             var channel = -1;
             //有当前批次,给plc通道号
-            if (ConCh1Status)
+            if (!ConCh1Status)
                 channel = 1;
             else if (ConCh2Status)
                 channel = 2;
@@ -1590,6 +1613,10 @@ namespace StackControl
 
                     BoardInfo.Status = (int)StackStatus.单板开始抓板;
 
+                    Db.SaveChanges();
+
+                    upe_Background(BoardInfo.Pos, (int)BoardInfo.Status, (int)BoardInfo.About);
+
                     #region StackIndo's Status update by trigger when the board picked finish 
                     //StackIndo's Status update by trigger when the board picked finish 
                     //var StackInfo_table = Db.StackInfo_table.Where(s => s.Batch == Batch && s.StackId == StackId && s.Status == (int)StackStatus.抓板区).FirstOrDefault();
@@ -1599,8 +1626,6 @@ namespace StackControl
                     //    StackInfo_table.Status = (int)StackStatus.整垛开始抓板;
                     //}
                     #endregion
-
-                    Db.SaveChanges();
                 }
             }
             catch (Exception ex)
@@ -1685,10 +1710,10 @@ namespace StackControl
                         switch (about)
                         {
                             case 1:
-                                this.st1Count.Text = StackSurplusCount.ToString();
+                                this.st1Count.Dispatcher.Invoke(new Action(() => { this.st1Count.Text = StackSurplusCount.ToString(); }));
                                 break;
                             case 2:
-                                this.st2Count.Text = StackSurplusCount.ToString();
+                                this.st2Count.Dispatcher.Invoke(new Action(() => { this.st2Count.Text = StackSurplusCount.ToString(); }));
                                 break;
                         }
                         upe_Background(BoardInfo.Pos, 3, (int)BoardInfo.About);
@@ -1708,6 +1733,7 @@ namespace StackControl
 
         #region ScanBoards
 
+        #region Left Scanner
         /// <summary>
         /// Left ScanBoards Timer
         /// </summary>
@@ -1742,6 +1768,10 @@ namespace StackControl
                 Interlocked.Exchange(ref inTimer_LeftScanBoards, 0);
             }
         }
+
+        #endregion
+
+        #region Right Scanner
         /// <summary>
         /// Right ScanBoards Timer
         /// </summary>
@@ -1777,145 +1807,12 @@ namespace StackControl
             }
         }
 
-        /// <summary>
-        /// ScanBoardsHandle
-        /// 
-        /// handle scanner 
-        /// </summary>
-        /// <param name="Station"></param>
-        public void ScanBoardsHandle(int Station)
-        {
-            string ScannerUpi = "";
-            int ScannerLorR = -1;
-            int RedLightFB = -1;
-            int GreenLightFB = -1;
-            int YellowLightFB = -1;
-            int ReqUpi = -1;
-            int logMark = -1;
-            int Data_Req = -1;
-            try
-            {
-                switch (Station)
-                {
-                    case 1:
-                        ScannerLorR = leftUPI;
-                        RedLightFB = LeftRedLightFB;
-                        GreenLightFB = LeftGreenLightFB;
-                        YellowLightFB = LeftYellowLightFB;
-                        ReqUpi = ReqLeftUPI;
-                        logMark = (int)LogMark.左侧下层扫码;
-                        Data_Req = ReqLeftUPI;
-                        break;
-                    case 2:
-                        ScannerLorR = RightUPI;
-                        RedLightFB = RightRedLightFB;
-                        GreenLightFB = RightGreenLightFB;
-                        YellowLightFB = RightYellowLightFB;
-                        ReqUpi = ReqRightUPI;
-                        logMark = (int)LogMark.右侧上层扫码;
-                        Data_Req = ReqRightUPI;
-                        break;
-                }
-
-
-                if (!(bool)tcClient.ReadAny(Data_Req, typeof(bool)))
-                {
-                    return;
-                }
-
-                ScannerUpi = tcClient.ReadAny(ScannerLorR, typeof(String), new int[] { 50 }).ToString();
-
-                LogHandle.WriteLog_Info(logMark, "ScanBoardsHandle : " + ScannerUpi.ToString());
-
-                using (EDM Db = new EDM())
-                {
-                    ScanBoardsRecord scanBoardsRecord = new ScanBoardsRecord();
-
-                    if (ScannerUpi.ToUpper().Contains("ERROR"))
-                    {
-                        scanBoardsRecord.Upi = ScannerUpi;
-                        scanBoardsRecord.Batch = null;
-                        scanBoardsRecord.Station = Station;
-                        scanBoardsRecord.ScanTime = DateTime.Now;
-
-                        Db.ScanBoardsRecord.Add(scanBoardsRecord);
-
-                        Db.SaveChanges();
-
-                        return;
-                    }
-
-                    var BatchBoardsInfo = Db.Board_table.FirstOrDefault(s => s.Upi == ScannerUpi);
-
-                    if (BatchBoardsInfo == null)
-                    {
-                        LogHandle.WriteLog_Info(logMark, "ScanBoardsHandle ScannerUpi :" + ScannerUpi + "There is no info about that");
-                        return;
-                    }
-                    var BoardBatchId = BatchBoardsInfo.BatchId;
-
-                    BatchBoardsInfo.Status = 1;
-
-                    scanBoardsRecord.Upi = ScannerUpi;
-                    scanBoardsRecord.Batch = BoardBatchId;
-                    scanBoardsRecord.Station = Station;
-                    scanBoardsRecord.ScanTime = DateTime.Now;
-
-                    Db.ScanBoardsRecord.Add(scanBoardsRecord);
-
-                    Db.SaveChanges();
-
-                    if (!(Equals(BoardBatchId, string.Empty)))
-                    {
-                        if (!Equals(BoardBatchId, lprebatchid))
-                        {
-                            tcClient.WriteAny(RedLightFB, true);
-                            tcClient.WriteAny(GreenLightFB, false);
-                            tcClient.WriteAny(YellowLightFB, false);
-                        }
-                        else if (Equals(BoardBatchId, lprebatchid) && !Equals(BoardBatchId, string.Empty))
-                        {
-                            tcClient.WriteAny(RedLightFB, false);
-                            tcClient.WriteAny(GreenLightFB, true);
-                            tcClient.WriteAny(YellowLightFB, false);
-                        }
-                    }
-                    else
-                    {
-                        tcClient.WriteAny(RedLightFB, true);
-                        tcClient.WriteAny(GreenLightFB, true);
-                        tcClient.WriteAny(YellowLightFB, true);
-                    }
-
-                    var NotScanCount = Db.Board_table.Where(s => s.Status == 0 && s.BatchId == BoardBatchId).Count();
-
-                    if (NotScanCount == 0)
-                    {
-                        tcClient.WriteAny(RedLightFB, false);
-                        tcClient.WriteAny(GreenLightFB, true);
-                        tcClient.WriteAny(YellowLightFB, true);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("ScanBoardsHandle Station :" + Station + ex.ToString());
-                LogHandle.WriteLog_Error(logMark, "ScanBoardsHandle Station :" + Station + ex.ToString());
-                App.Current.Dispatcher.Invoke(() =>
-                {
-                    Alarmlist.Add(new Alarm() { Message = ex.Message + "ScanBoardsHandle Station : " + Station, Timestamp = DateTime.Now });
-                });
-            }
-            finally
-            {
-                tcClient.WriteAny(ReqUpi, false);
-            }
-        }
-
+        #endregion
         #endregion
         #endregion
 
         #region Fun
+
         #region Req_PutOnThePlates 上料请求
         /// <summary>
         /// Req_PutOnThePlates 上料请求
@@ -1953,8 +1850,12 @@ namespace StackControl
                         //Update StackInfo ：About 
                         StackInfo.About = About;
                         //更新Stack_table
-                        var stack_Table = Db.Stack_table.FirstOrDefault(s => s.StackId == StackInfo.StackId);
-                        stack_Table.About = About;
+                        var stack_Table = Db.Stack_table.Where(s => s.StackId == StackInfo.StackId).ToList();
+
+                        stack_Table.ForEach(s =>
+                        {
+                            s.About = 1;
+                        });
 
                         tcClient.WriteAny(plcPara_LoadReq, false);
 
@@ -2267,6 +2168,143 @@ namespace StackControl
                 });
             }
             return complete;
+        }
+        #endregion
+
+        #region ScanBoardsHandle
+        /// <summary>
+        /// ScanBoardsHandle
+        /// 
+        /// handle scanner 
+        /// </summary>
+        /// <param name="Station"></param>
+        public void ScanBoardsHandle(int Station)
+        {
+            string ScannerUpi = "";
+            int ScannerLorR = -1;
+            int RedLightFB = -1;
+            int GreenLightFB = -1;
+            int YellowLightFB = -1;
+            int ReqUpi = -1;
+            int logMark = -1;
+            int Data_Req = -1;
+            try
+            {
+                switch (Station)
+                {
+                    case 1:
+                        ScannerLorR = leftUPI;
+                        RedLightFB = LeftRedLightFB;
+                        GreenLightFB = LeftGreenLightFB;
+                        YellowLightFB = LeftYellowLightFB;
+                        ReqUpi = ReqLeftUPI;
+                        logMark = (int)LogMark.左侧下层扫码;
+                        Data_Req = ReqLeftUPI;
+                        break;
+                    case 2:
+                        ScannerLorR = RightUPI;
+                        RedLightFB = RightRedLightFB;
+                        GreenLightFB = RightGreenLightFB;
+                        YellowLightFB = RightYellowLightFB;
+                        ReqUpi = ReqRightUPI;
+                        logMark = (int)LogMark.右侧上层扫码;
+                        Data_Req = ReqRightUPI;
+                        break;
+                }
+
+
+                if (!(bool)tcClient.ReadAny(Data_Req, typeof(bool)))
+                {
+                    return;
+                }
+
+                ScannerUpi = tcClient.ReadAny(ScannerLorR, typeof(String), new int[] { 50 }).ToString();
+
+                LogHandle.WriteLog_Info(logMark, "ScanBoardsHandle : " + ScannerUpi.ToString());
+
+                using (EDM Db = new EDM())
+                {
+                    ScanBoardsRecord scanBoardsRecord = new ScanBoardsRecord();
+
+                    if (ScannerUpi.ToUpper().Contains("ERROR"))
+                    {
+                        scanBoardsRecord.Upi = ScannerUpi;
+                        scanBoardsRecord.Batch = null;
+                        scanBoardsRecord.Station = Station;
+                        scanBoardsRecord.ScanTime = DateTime.Now;
+
+                        Db.ScanBoardsRecord.Add(scanBoardsRecord);
+
+                        Db.SaveChanges();
+
+                        return;
+                    }
+
+                    var BatchBoardsInfo = Db.Board_table.FirstOrDefault(s => s.Upi == ScannerUpi);
+
+                    if (BatchBoardsInfo == null)
+                    {
+                        LogHandle.WriteLog_Info(logMark, "ScanBoardsHandle ScannerUpi :" + ScannerUpi + "There is no info about that");
+                        return;
+                    }
+                    var BoardBatchId = BatchBoardsInfo.BatchId;
+
+                    BatchBoardsInfo.Status = 1;
+
+                    scanBoardsRecord.Upi = ScannerUpi;
+                    scanBoardsRecord.Batch = BoardBatchId;
+                    scanBoardsRecord.Station = Station;
+                    scanBoardsRecord.ScanTime = DateTime.Now;
+
+                    Db.ScanBoardsRecord.Add(scanBoardsRecord);
+
+                    Db.SaveChanges();
+
+                    if (!(Equals(BoardBatchId, string.Empty)))
+                    {
+                        if (!Equals(BoardBatchId, lprebatchid))
+                        {
+                            tcClient.WriteAny(RedLightFB, true);
+                            tcClient.WriteAny(GreenLightFB, false);
+                            tcClient.WriteAny(YellowLightFB, false);
+                        }
+                        else if (Equals(BoardBatchId, lprebatchid) && !Equals(BoardBatchId, string.Empty))
+                        {
+                            tcClient.WriteAny(RedLightFB, false);
+                            tcClient.WriteAny(GreenLightFB, true);
+                            tcClient.WriteAny(YellowLightFB, false);
+                        }
+                    }
+                    else
+                    {
+                        tcClient.WriteAny(RedLightFB, true);
+                        tcClient.WriteAny(GreenLightFB, true);
+                        tcClient.WriteAny(YellowLightFB, true);
+                    }
+
+                    var NotScanCount = Db.Board_table.Where(s => s.Status == 0 && s.BatchId == BoardBatchId).Count();
+
+                    if (NotScanCount == 0)
+                    {
+                        tcClient.WriteAny(RedLightFB, false);
+                        tcClient.WriteAny(GreenLightFB, true);
+                        tcClient.WriteAny(YellowLightFB, true);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("ScanBoardsHandle Station :" + Station + ex.ToString());
+                LogHandle.WriteLog_Error(logMark, "ScanBoardsHandle Station :" + Station + ex.ToString());
+                App.Current.Dispatcher.Invoke(() =>
+                {
+                    Alarmlist.Add(new Alarm() { Message = ex.Message + "ScanBoardsHandle Station : " + Station, Timestamp = DateTime.Now });
+                });
+            }
+            finally
+            {
+                tcClient.WriteAny(ReqUpi, false);
+            }
         }
         #endregion
         #endregion

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:StackControl"
         mc:Ignorable="d" 
-        Title="StackControl" Icon="images/icon.png"  WindowState="Maximized" Loaded="Window_Loaded" BorderBrush="#FF0D75AB" BorderThickness="2" Closed="Window_Closed" Closing="Window_Closing" ContentRendered="Window_ContentRendered" Height="1681.118" d:DesignWidth="1248.687">
+        Title="StackControl" Icon="images/icon.png"  WindowState="Maximized" Loaded="Window_Loaded" BorderBrush="#FF0D75AB" BorderThickness="2" Closed="Window_Closed" Closing="Window_Closing" Height="1681.118" d:DesignWidth="1248.687">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="auto" ></RowDefinition>
@@ -18,16 +18,17 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"></ColumnDefinition>
                     <ColumnDefinition Width="Auto"></ColumnDefinition>
-                    <ColumnDefinition Width="*"></ColumnDefinition>
+                    <ColumnDefinition Width="617*"></ColumnDefinition>
+                    <ColumnDefinition Width="370*"/>
                     <ColumnDefinition Width="Auto"></ColumnDefinition>
                     <ColumnDefinition Width="Auto"></ColumnDefinition>
                     <ColumnDefinition Width="Auto"></ColumnDefinition>
 
                 </Grid.ColumnDefinitions>
 
-                <Image Grid.Column="0" Source="images/logo_H.png" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1" Text="Stack Control System" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF001941" FontSize="20" Height="33"  />
-                <TextBlock Grid.Column="5" x:Name="timeTb" Margin="5" FontSize="20" FlowDirection="RightToLeft" Foreground="#FF181817" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Image Grid.Column="0" Source="images/logo_H.png" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0.4,0"/>
+                <TextBlock Text="Stack Control System" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF001941" FontSize="20" Height="33" Grid.ColumnSpan="3" Margin="38,-1,616.665,-2"  />
+                <TextBlock Grid.Column="5" x:Name="timeTb" Margin="5.2,2" FontSize="20" FlowDirection="RightToLeft" Foreground="#FF181817" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.ColumnSpan="2" />
             </Grid>
         </Border>
 
