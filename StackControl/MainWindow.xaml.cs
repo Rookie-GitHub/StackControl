@@ -199,8 +199,9 @@ namespace StackControl
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            LogHandle.WriteLog_Info(0,"");
-            Analysis("062210511001020-A_1");
+            //SendCutPic(1);
+            RightScanBoardsTimer();
+            //Analysis("062210511001020-A_1");
             this.alarm.ItemsSource = Alarmlist;
             CurrentBatch = config.AppSettings.Settings["CurrentBatchID"].Value;
             //showTime();
@@ -870,7 +871,7 @@ namespace StackControl
                             }
 
                             //存储堆垛信息
-                            List<string> list_Stack = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme, Encoding.Default).ToList();  //(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_1.csv", Encoding.Default).ToList(); 
+                            List<string> list_Stack = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme, Encoding.Default).ToList();  //(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_1.csv", Encoding.Default).ToList(); //
 
                             if (list_Stack.Count <= 0)
                             {
@@ -934,7 +935,7 @@ namespace StackControl
                             //存储板料信息
                             if (File.Exists(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts))
                             {
-                                List<string> list_Parts = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts, Encoding.Default).ToList(); //(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_parts.csv", Encoding.Default).ToList();
+                                List<string> list_Parts = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts, Encoding.Default).ToList(); //(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_parts.csv", Encoding.Default).ToList(); //
 
                                 if (list_Parts.Count <= 0)
                                 {
@@ -954,8 +955,6 @@ namespace StackControl
                                         Upi = s.Split(',')[2],
                                         Array = Convert.ToInt32(s.Split(',')[1]),
                                         Status = (int)BoardScanStatus.未扫描,
-                                        Station = 0,
-                                        ScanTime = null
                                     };
 
                                     board_Tables.Add(board_Table);
@@ -969,7 +968,7 @@ namespace StackControl
                             //存储批次数量信息
                             if (File.Exists(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All))
                             {
-                                string[] BatchInfo = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, Encoding.Default);//(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_all.csv", Encoding.Default);
+                                string[] BatchInfo = File.ReadAllLines(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, Encoding.Default);//(@"E:\Homag\Project\Oppen-wuxi-2020\CSV\062210511001020-A_all.csv", Encoding.Default); //
 
                                 if (BatchInfo.Length <= 0)
                                 {
@@ -1733,14 +1732,13 @@ namespace StackControl
                 if (Interlocked.Exchange(ref inTimer_LeftScanBoards, 1) == 0)
                 {
                     ScanBoardsHandle((int)ScanStation.左侧下层出料口);
+                    Interlocked.Exchange(ref inTimer_LeftScanBoards, 0);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("LeftScanBoardsEvent " + ex.Message);
-            }
-            finally
-            {
+                LogHandle.WriteLog_Error((int)LogMark.左侧下层扫码, ex.Message);
                 Interlocked.Exchange(ref inTimer_LeftScanBoards, 0);
             }
         }
@@ -1768,14 +1766,13 @@ namespace StackControl
                 if (Interlocked.Exchange(ref inTimer_RightScanBoards, 1) == 0)
                 {
                     ScanBoardsHandle((int)ScanStation.右侧上层出料口);
+                    Interlocked.Exchange(ref inTimer_RightScanBoards, 0);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine("RightScanBoardsEvent " + ex.Message);
-            }
-            finally
-            {
+                LogHandle.WriteLog_Error((int)LogMark.右侧上层扫码, ex.Message);
                 Interlocked.Exchange(ref inTimer_RightScanBoards, 0);
             }
         }
@@ -1794,6 +1791,8 @@ namespace StackControl
             int GreenLightFB = -1;
             int YellowLightFB = -1;
             int ReqUpi = -1;
+            int logMark = -1;
+            int Data_Req = -1;
             try
             {
                 switch (Station)
@@ -1804,6 +1803,8 @@ namespace StackControl
                         GreenLightFB = LeftGreenLightFB;
                         YellowLightFB = LeftYellowLightFB;
                         ReqUpi = ReqLeftUPI;
+                        logMark = (int)LogMark.左侧下层扫码;
+                        Data_Req = ReqLeftUPI;
                         break;
                     case 2:
                         ScannerLorR = RightUPI;
@@ -1811,9 +1812,20 @@ namespace StackControl
                         GreenLightFB = RightGreenLightFB;
                         YellowLightFB = RightYellowLightFB;
                         ReqUpi = ReqRightUPI;
+                        logMark = (int)LogMark.右侧上层扫码;
+                        Data_Req = ReqRightUPI;
                         break;
                 }
+
+
+                if (!(bool)tcClient.ReadAny(Data_Req, typeof(bool)))
+                {
+                    return;
+                }
+
                 ScannerUpi = tcClient.ReadAny(ScannerLorR, typeof(String), new int[] { 50 }).ToString();
+
+                LogHandle.WriteLog_Info(logMark, "ScanBoardsHandle : " + ScannerUpi.ToString());
 
                 using (EDM Db = new EDM())
                 {
@@ -1835,11 +1847,14 @@ namespace StackControl
 
                     var BatchBoardsInfo = Db.Board_table.FirstOrDefault(s => s.Upi == ScannerUpi);
 
+                    if (BatchBoardsInfo == null)
+                    {
+                        LogHandle.WriteLog_Info(logMark, "ScanBoardsHandle ScannerUpi :" + ScannerUpi + "There is no info about that");
+                        return;
+                    }
                     var BoardBatchId = BatchBoardsInfo.BatchId;
 
                     BatchBoardsInfo.Status = 1;
-                    BatchBoardsInfo.Station = Station;
-                    BatchBoardsInfo.ScanTime = DateTime.Now;
 
                     scanBoardsRecord.Upi = ScannerUpi;
                     scanBoardsRecord.Batch = BoardBatchId;
@@ -1857,7 +1872,6 @@ namespace StackControl
                             tcClient.WriteAny(RedLightFB, true);
                             tcClient.WriteAny(GreenLightFB, false);
                             tcClient.WriteAny(YellowLightFB, false);
-
                         }
                         else if (Equals(BoardBatchId, lprebatchid) && !Equals(BoardBatchId, string.Empty))
                         {
@@ -1886,6 +1900,7 @@ namespace StackControl
             catch (Exception ex)
             {
                 Console.WriteLine("ScanBoardsHandle Station :" + Station + ex.ToString());
+                LogHandle.WriteLog_Error(logMark, "ScanBoardsHandle Station :" + Station + ex.ToString());
                 App.Current.Dispatcher.Invoke(() =>
                 {
                     Alarmlist.Add(new Alarm() { Message = ex.Message + "ScanBoardsHandle Station : " + Station, Timestamp = DateTime.Now });
@@ -2084,7 +2099,7 @@ namespace StackControl
                         PatternOKFB = CH1PatternOKFB;
                         PartDataFBReset = CH1PartDataFBReset;
                         textBlock = hps1;
-                        BoardPartId = 1;
+                        //BoardPartId = 1;
                         break;
                     case 2:
                         BatchIDFB = CH2BatchIDFB;
@@ -2092,7 +2107,7 @@ namespace StackControl
                         PatternOKFB = CH2PatternOKFB;
                         PartDataFBReset = CH2PartDataFBReset;
                         textBlock = hps2;
-                        BoardPartId = 2;
+                        //BoardPartId = 2;
                         break;
                     case 3:
                         BatchIDFB = CH3BatchIDFB;
@@ -2100,7 +2115,7 @@ namespace StackControl
                         PatternOKFB = CH3PatternOKFB;
                         PartDataFBReset = CH3PartDataFBReset;
                         textBlock = hps3;
-                        BoardPartId = 3;
+                        //BoardPartId = 3;
                         break;
                     case 4:
                         BatchIDFB = CH4BatchIDFB;
@@ -2108,7 +2123,7 @@ namespace StackControl
                         PatternOKFB = CH4PatternOKFB;
                         PartDataFBReset = CH4PartDataFBReset;
                         textBlock = hps4;
-                        BoardPartId = 4;
+                        //BoardPartId = 4;
                         break;
                     case 5:
                         BatchIDFB = CH5BatchIDFB;
@@ -2116,7 +2131,7 @@ namespace StackControl
                         PatternOKFB = CH5PatternOKFB;
                         PartDataFBReset = CH5PartDataFBReset;
                         textBlock = hps5;
-                        BoardPartId = 5;
+                        //BoardPartId = 5;
                         break;
                     default:
                         break;
@@ -2124,10 +2139,7 @@ namespace StackControl
 
                 HPSPlateId = tcClient.ReadAny(BatchIDFB, typeof(string), new int[] { 30 }).ToString();//批次
                 _PatternFB = tcClient.ReadAny(PatternFB, typeof(string), new int[] { 30 }).ToString();//cut pic bmp
-                _BoardPartId = Convert.ToInt32(tcClient.ReadAny(BoardPartId, typeof(int)));//cut pic bmp
-
-                //NO1HPSPlateID = tcClient.ReadAny(BatchIDFB, typeof(string), new int[] { 30 }).ToString();//批次
-                //string _CH1PatternFB = tcClient.ReadAny(PatternFB, typeof(string), new int[] { 30 }).ToString();//锯切图编号
+                //_BoardPartId = Convert.ToInt32(tcClient.ReadAny(BoardPartId, typeof(int)));//大阪PartId
 
                 if (SendActivateFileToHps(MachineNo, HPSPlateId, _PatternFB))
                 {
@@ -2154,6 +2166,7 @@ namespace StackControl
             catch (Exception ex)
             {
                 Console.WriteLine("SendCutPic MachineNo : " + MachineNo + ex.ToString());
+                LogHandle.WriteLog_Error((int)LogMark.锯切图, "SendCutPic MachineNo : " + ex.Message);
                 App.Current.Dispatcher.Invoke(() =>
                 {
                     Alarmlist.Add(new Alarm() { Message = ex.Message + "SendCutPic MachineNo : " + MachineNo, Timestamp = DateTime.Now });
@@ -2231,6 +2244,7 @@ namespace StackControl
 
                             complete = true;
                         }
+                        LogHandle.WriteLog_Info((int)LogMark.锯切图, "SendActivateFileToHps succeed! MachineNo :" + HPS + " bmp :" + Pattern);
                     }
                     else
                     {
@@ -2244,13 +2258,13 @@ namespace StackControl
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message + "SendActivateFileToHps failed!");
+                Console.WriteLine(ex.Message + "SendActivateFileToHps failed! MachineNo :" + HPS);
+                LogHandle.WriteLog_Error((int)LogMark.锯切图, "SendActivateFileToHps failed! MachineNo :" + HPS + ex.Message);
                 App.Current.Dispatcher.Invoke(() =>
                 {
                     Alarmlist.Add(new Alarm() { Message = ex.Message + "SendActivateFileToHps failed!", Timestamp = DateTime.Now });
 
                 });
-
             }
             return complete;
         }

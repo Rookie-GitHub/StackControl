@@ -20,10 +20,15 @@ namespace DTO.EDM
         public virtual DbSet<SendCutPicRecord> SendCutPicRecord { get; set; }
         public virtual DbSet<Stack_table> Stack_table { get; set; }
         public virtual DbSet<StackInfo_table> StackInfo_table { get; set; }
+        public virtual DbSet<ScanBoards_View> ScanBoards_View { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Board_table>()
+                .Property(e => e.Upi)
+                .IsUnicode(false);
+
+            modelBuilder.Entity<ScanBoards_View>()
                 .Property(e => e.Upi)
                 .IsUnicode(false);
         }

@@ -55,6 +55,7 @@
     <Compile Include="EDM\EDM.cs" />
     <Compile Include="EDM\LineBatchInfo.cs" />
     <Compile Include="EDM\ScanBoardsRecord.cs" />
+    <Compile Include="EDM\ScanBoards_View.cs" />
     <Compile Include="EDM\ScanQrCodeRecord.cs" />
     <Compile Include="EDM\SendCutPicRecord.cs" />
     <Compile Include="EDM\StackInfo_table.cs" />

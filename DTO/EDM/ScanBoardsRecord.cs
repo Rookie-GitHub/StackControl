@@ -9,7 +9,6 @@ namespace DTO.EDM
     [Table("ScanBoardsRecord")]
     public partial class ScanBoardsRecord
     {
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         public int Id { get; set; }
 
         [Required]
