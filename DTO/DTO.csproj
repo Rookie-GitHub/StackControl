@@ -59,6 +59,7 @@
     <Compile Include="EDM\ScanQrCodeRecord.cs" />
     <Compile Include="EDM\SendCutPicRecord.cs" />
     <Compile Include="EDM\StackInfo_table.cs" />
+    <Compile Include="EDM\StacksInfo_View.cs" />
     <Compile Include="EDM\Stack_table.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

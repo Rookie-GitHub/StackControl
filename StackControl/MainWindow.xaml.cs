@@ -199,18 +199,15 @@ namespace StackControl
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            //EnterThePickPlateArea(1);
-            //SendCutPic(1);
-            //Analysis("062210511001020-A_1");
             this.alarm.ItemsSource = Alarmlist;
             CurrentBatch = config.AppSettings.Settings["CurrentBatchID"].Value;
-            //showTime();
-            //ScanQRCode();
-            //FirstConfigPLC();
-            //PickBoardTimer();
+            showTime();
+            ScanQRCode();
+            FirstConfigPLC();
+            PickBoardTimer();
             PickBoardFinishTimer();
-            //LeftScanBoardsTimer();
-            //RightScanBoardsTimer();
+            LeftScanBoardsTimer();
+            RightScanBoardsTimer();
         }
         #endregion
 
@@ -964,8 +961,8 @@ namespace StackControl
 
                                 Db.Board_table.AddRange(board_Tables);
 
-                                File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme_Parts);
                             }
+                            File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_Parts, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme_Parts);
 
                             //存储批次数量信息
                             if (File.Exists(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All))
@@ -991,8 +988,8 @@ namespace StackControl
 
                                 Db.Batch_table.Add(batch_Table);
 
-                                File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme_All);
                             }
+                            File.Move(@"\\" + Getcsv_IP + @"\" + Path + @"\" + FileNme_All, @"\\" + Getcsv_IP + @"\" + Goal + @"\" + FileNme_All);
                             Db.SaveChanges();
                         }
                     }
@@ -1018,7 +1015,7 @@ namespace StackControl
         /// <param name="e"></param>
         //private void Window_ContentRendered(object sender, EventArgs e)
         //{
-        //    //view();
+        //    view();
         //}
         #endregion
 
@@ -1235,9 +1232,9 @@ namespace StackControl
             if (border == B40 && status == 3)
             {
                 //更新堆垛id
-                st2.Text = "";
+                //st2.Text = "";
                 //更新批次id
-                st4.Text = "";
+                //st4.Text = "";
                 //更新进料状态
                 //st6.Fill = new SolidColorBrush(Colors.Yellow);
                 st6.Dispatcher.Invoke(new Action(() => { st6.Fill = new SolidColorBrush(Colors.Yellow); }));
@@ -1422,7 +1419,7 @@ namespace StackControl
                     {
                         return;
                     }
-
+                    LogHandle.WriteLog_Info((int)LogMark.抓板, "reveice req");
                     using (EDM Db = new EDM())
                     {
                         int About = -1;
@@ -1480,11 +1477,11 @@ namespace StackControl
                                     //The last plate
                                     BasePlate = true;
                                 }
-                                else if (AmountStackNum > 40 && currentStackNum % 40 == 0)
-                                {
-                                    //The last plate
-                                    BasePlate = true;
-                                }
+                                //else if (AmountStackNum > 40 && currentStackNum % 40 == 0 && currentStackNum > 0)
+                                //{
+                                //    //The last plate
+                                //    BasePlate = true;
+                                //}
                                 else if (currentStackNum == AmountStackNum)
                                 {
                                     //The last plate
@@ -1513,6 +1510,8 @@ namespace StackControl
                             LogHandle.WriteLog_Info((int)LogMark.抓板区, "There is no board to pick！");
                         }
                     }
+
+                    LogHandle.WriteLog_Info((int)LogMark.抓板, "Send Data");
                 }
                 catch (Exception ex)
                 {
@@ -1584,6 +1583,11 @@ namespace StackControl
                 using (EDM Db = new EDM())
                 {
                     var BoardInfo = Db.Stack_table.Where(s => s.Batch == Batch && s.StackId == StackId && s.Status == (int)StackStatus.抓板区).OrderByDescending(s => s.Pos).FirstOrDefault();
+
+                    if (BoardInfo == null)
+                    {
+                        return;
+                    }
 
                     var map = BoardInfo.Map;
 
@@ -1677,14 +1681,19 @@ namespace StackControl
                     {
                         return;
                     }
+                    LogHandle.WriteLog_Info((int)LogMark.抓板, "reveice Finish");
 
                     using (EDM Db = new EDM())
                     {
 
-                        //todo:PLC feedback board part id
+                        //todo:PLC feedback board part id bug
 
                         //找到 stack_table 中 status = 2(开始抓板) Board 
                         var BoardInfo = Db.Stack_table.Where(s => s.Status == (int)StackStatus.单板开始抓板).OrderByDescending(s => s.Pos).FirstOrDefault();
+                        if (BoardInfo == null)
+                        {
+                            return;
+                        }
                         about = (int)BoardInfo.About;
                         int _PartID = Convert.ToInt16(BoardInfo.PartID);
                         string _StackID = BoardInfo.StackId;
@@ -1707,6 +1716,8 @@ namespace StackControl
                         tcClient.WriteAny(PickPartFinishReqFB, false);
 
                         Db.SaveChanges();
+                        
+                        LogHandle.WriteLog_Info((int)LogMark.抓板, "RE Finish");
 
                         StackSurplusCount = stackInfo_table.PlateAmount - stackInfo_table.CurrentCount;
 
@@ -1863,7 +1874,7 @@ namespace StackControl
                         }
                         stack_Table.ForEach(s =>
                         {
-                            s.About = 1;
+                            s.About = About;
                         });
 
                         tcClient.WriteAny(plcPara_LoadReq, false);
@@ -2316,6 +2327,8 @@ namespace StackControl
             }
         }
         #endregion
+
         #endregion
+
     }
 }

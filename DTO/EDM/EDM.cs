@@ -21,6 +21,7 @@ namespace DTO.EDM
         public virtual DbSet<Stack_table> Stack_table { get; set; }
         public virtual DbSet<StackInfo_table> StackInfo_table { get; set; }
         public virtual DbSet<ScanBoards_View> ScanBoards_View { get; set; }
+        public virtual DbSet<StacksInfo_View> StacksInfo_View { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
