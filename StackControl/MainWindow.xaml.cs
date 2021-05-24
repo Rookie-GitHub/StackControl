@@ -209,13 +209,13 @@ namespace StackControl
         {
             try
             {
-                //ViewLoad();
-                //ScanQRCode();
-                //FirstConfigPLC();
-                //PickBoardTimer();
-                //PickBoardFinishTimer();
-                //LeftScanBoardsTimer();
-                //RightScanBoardsTimer();
+                ViewLoad();
+                ScanQRCode();
+                FirstConfigPLC();
+                PickBoardTimer();
+                PickBoardFinishTimer();
+                LeftScanBoardsTimer();
+                RightScanBoardsTimer();
 
                 return true;
             }
