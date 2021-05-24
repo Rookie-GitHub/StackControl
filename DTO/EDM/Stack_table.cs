@@ -43,5 +43,7 @@ namespace DTO.EDM
         public int? About { get; set; }
 
         public DateTime? DateTime { get; set; }
+
+        public DateTime? UpdateTime { get; set; }
     }
 }

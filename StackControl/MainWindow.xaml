@@ -33,7 +33,14 @@
                 </Grid.ColumnDefinitions>
 
                 <Image Grid.Column="0" Source="images/logo_H.png" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0.4,0"/>
-                <TextBlock Text="Stack Control System" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FF001941" FontSize="20" Height="33" Grid.ColumnSpan="3" Margin="38,-1,616.665,-2"  />
+                <TextBlock Name="SystemRun" Text="Stack Control System" FontSize="20" Height="33" Margin="0,0,0,0" HorizontalAlignment="Right" Grid.Column="2" MouseDown="TextBlock_MouseDown"  >
+                    <TextBlock.Foreground>
+                        <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                            <GradientStop Color="Black" Offset="0"/>
+                            <GradientStop Color="#FFEE2626" Offset="1"/>
+                        </LinearGradientBrush>
+                    </TextBlock.Foreground>
+                </TextBlock>
                 <TextBlock Grid.Column="5" x:Name="timeTb" Margin="5.2,2" FontSize="20" FlowDirection="RightToLeft" Foreground="#FF181817" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.ColumnSpan="2" />
             </Grid>
         </Border>

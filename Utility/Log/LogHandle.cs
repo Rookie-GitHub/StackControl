@@ -46,6 +46,12 @@ namespace Utility
                 case 7:
                     filePath = "D:\\LogInfo\\OnNotification" + "-" + System.DateTime.Now.ToString("yyyyMMdd") + ".log";
                     break;
+                case 8:
+                    filePath = "D:\\LogInfo\\View" + "-" + System.DateTime.Now.ToString("yyyyMMdd") + ".log";
+                    break;
+                case 9:
+                    filePath = "D:\\LogInfo\\BasePlate" + "-" + System.DateTime.Now.ToString("yyyyMMdd") + ".log";
+                    break;
                 default:
                     break;
             }
@@ -91,6 +97,12 @@ namespace Utility
                     break;
                 case 7:
                     filePath = "D:\\LogError\\OnNotification" + "-" + System.DateTime.Now.ToString("yyyyMMdd") + ".log";
+                    break;
+                case 8:
+                    filePath = "D:\\LogError\\View" + "-" + System.DateTime.Now.ToString("yyyyMMdd") + ".log";
+                    break;
+                case 9:
+                    filePath = "D:\\LogError\\BasePlate" + "-" + System.DateTime.Now.ToString("yyyyMMdd") + ".log";
                     break;
                 default:
                     break;

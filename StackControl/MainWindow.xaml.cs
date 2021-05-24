@@ -54,23 +54,23 @@ namespace StackControl
         private bool HeartBroken = false;
         // plc handler
         private int PickPartFinishReqFB;
-        private int CH1PathFB;
+        private int CH1PartIDFB;
         private int CH1BatchIDFB;
         private int CH1StackIDFB;
         private int CH1PatternFB;
-        private int CH2PathFB;
+        private int CH2PartIDFB;
         private int CH2BatchIDFB;
         private int CH2StackIDFB;
         private int CH2PatternFB;
-        private int CH3PathFB;
+        private int CH3PartIDFB;
         private int CH3BatchIDFB;
         private int CH3StackIDFB;
         private int CH3PatternFB;
-        private int CH4PathFB;
+        private int CH4PartIDFB;
         private int CH4BatchIDFB;
         private int CH4StackIDFB;
         private int CH4PatternFB;
-        private int CH5PathFB;
+        private int CH5PartIDFB;
         private int CH5BatchIDFB;
         private int CH5StackIDFB;
         private int CH5PatternFB;
@@ -202,13 +202,29 @@ namespace StackControl
             this.alarm.ItemsSource = Alarmlist;
             CurrentBatch = config.AppSettings.Settings["CurrentBatchID"].Value;
             showTime();
-            ScanQRCode();
-            FirstConfigPLC();
-            PickBoardTimer();
-            PickBoardFinishTimer();
-            LeftScanBoardsTimer();
-            RightScanBoardsTimer();
+
         }
+
+        private bool StartSystem()
+        {
+            try
+            {
+                //ViewLoad();
+                //ScanQRCode();
+                //FirstConfigPLC();
+                //PickBoardTimer();
+                //PickBoardFinishTimer();
+                //LeftScanBoardsTimer();
+                //RightScanBoardsTimer();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
         #endregion
 
         #region PLC
@@ -307,23 +323,23 @@ namespace StackControl
                 #region handler
                 HeatBeatInt = tcClient.CreateVariableHandle(".HeartBeat");
                 //plc -----> stack control
-                CH1PathFB = tcClient.CreateVariableHandle(".CH1_Path_FB");
+                CH1PartIDFB = tcClient.CreateVariableHandle(".CH1_PartID_FB");//Path => PartID
                 CH1BatchIDFB = tcClient.CreateVariableHandle(".CH1_BatchID_FB");
                 CH1StackIDFB = tcClient.CreateVariableHandle(".CH1_StackID_FB");
                 CH1PatternFB = tcClient.CreateVariableHandle(".CH1_Pattern_FB");
-                CH2PathFB = tcClient.CreateVariableHandle(".CH2_Path_FB");
+                CH2PartIDFB = tcClient.CreateVariableHandle(".CH2_PartID_FB");//Path => PartID
                 CH2BatchIDFB = tcClient.CreateVariableHandle(".CH2_BatchID_FB");
                 CH2StackIDFB = tcClient.CreateVariableHandle(".CH2_StackID_FB");
                 CH2PatternFB = tcClient.CreateVariableHandle(".CH2_Pattern_FB");
-                CH3PathFB = tcClient.CreateVariableHandle(".CH3_Path_FB");
+                CH3PartIDFB = tcClient.CreateVariableHandle(".CH3_PartID_FB");//Path => PartID
                 CH3BatchIDFB = tcClient.CreateVariableHandle(".CH3_BatchID_FB");
                 CH3StackIDFB = tcClient.CreateVariableHandle(".CH3_StackID_FB");
                 CH3PatternFB = tcClient.CreateVariableHandle(".CH3_Pattern_FB");
-                CH4PathFB = tcClient.CreateVariableHandle(".CH4_Path_FB");
+                CH4PartIDFB = tcClient.CreateVariableHandle(".CH4_PartID_FB");//Path => PartID
                 CH4BatchIDFB = tcClient.CreateVariableHandle(".CH4_BatchID_FB");
                 CH4StackIDFB = tcClient.CreateVariableHandle(".CH4_StackID_FB");
                 CH4PatternFB = tcClient.CreateVariableHandle(".CH4_Pattern_FB");
-                CH5PathFB = tcClient.CreateVariableHandle(".CH5_Path_FB");
+                CH5PartIDFB = tcClient.CreateVariableHandle(".CH5_PartID_FB");//Path => PartID
                 CH5BatchIDFB = tcClient.CreateVariableHandle(".CH5_BatchID_FB");
                 CH5StackIDFB = tcClient.CreateVariableHandle(".CH5_StackID_FB");
                 CH5PatternFB = tcClient.CreateVariableHandle(".CH5_Pattern_FB");
@@ -902,7 +918,8 @@ namespace StackControl
                                     Map = s.Split(',')[8],
                                     Status = (int)StackStatus.数据解析并存储完成,
                                     About = (int)PlatesChannel.无,
-                                    DateTime = dateTime
+                                    DateTime = dateTime,
+                                    UpdateTime = dateTime
                                 };
                                 Stack_tables.Add(stackModel);
                             });
@@ -925,7 +942,7 @@ namespace StackControl
                             Db.StackInfo_table.Add(stackInfo_Table);
 
                             /*Update ScanQrCode Status = 2 means Data Analysis and Save Complete*/
-                            var Scan_table = Db.ScanQrCodeRecord.FirstOrDefault(s => s.StackId == scanRes);
+                            var Scan_table = Db.ScanQrCodeRecord.OrderByDescending(s => s.ScanTime).FirstOrDefault(s => s.StackId == scanRes);
 
                             Scan_table.Status = (int)ScanQRCodeStatus.数据解析并存储完成;
 
@@ -1018,6 +1035,34 @@ namespace StackControl
         //    view();
         //}
         #endregion
+
+        #region View Load
+        public void ViewLoad()
+        {
+            try
+            {
+                using (EDM Db = new EDM())
+                {
+                    //Get Info about StackInfo which Status != 3
+                    var StackInfos = Db.StackInfo_table.Where(s => s.Status != 3).ToList();
+
+                    var _StackId = string.Empty;
+
+                    StackInfos.ForEach(s =>
+                    {
+                        _StackId = s.StackId;
+                        view(_StackId);
+                    });
+                    LogHandle.WriteLog_Info((int)LogMark.View, "ViewLoad sucess");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHandle.WriteLog_Error((int)LogMark.View, ex.Message);
+            }
+        }
+        #endregion
+
 
         #region Load View Data
         /// <summary>
@@ -1211,32 +1256,27 @@ namespace StackControl
         {
             if (status == 1)
                 border.Dispatcher.Invoke(new Action(() => { border.Background = new SolidColorBrush(Colors.Yellow); }));
-            //border.Background = new SolidColorBrush(Colors.Green);
             else if (status == 2)
                 border.Dispatcher.Invoke(new Action(() => { border.Background = new SolidColorBrush(Colors.Green); }));
-            //border.Background = new SolidColorBrush(Colors.Blue);
             else if (status == 3)
                 border.Dispatcher.Invoke(new Action(() => { border.Background = new SolidColorBrush(Colors.White); }));
-            //border.Background = new SolidColorBrush(Colors.White);
 
             if (border == A40 && status == 3)
             {
                 //更新堆垛id
-                st1.Text = "";
+                st1.Dispatcher.Invoke(new Action(() => { st1.Text = String.Empty; }));
                 //更新批次id
-                st3.Text = "";
+                st3.Dispatcher.Invoke(new Action(() => { st3.Text = String.Empty; }));
                 //更新进料状态
-                //st5.Fill = new SolidColorBrush(Colors.Yellow);
                 st5.Dispatcher.Invoke(new Action(() => { st5.Fill = new SolidColorBrush(Colors.Yellow); }));
             }
             if (border == B40 && status == 3)
             {
                 //更新堆垛id
-                //st2.Text = "";
+                st2.Dispatcher.Invoke(new Action(() => { st2.Text = String.Empty; }));
                 //更新批次id
-                //st4.Text = "";
+                st4.Dispatcher.Invoke(new Action(() => { st4.Text = String.Empty; }));
                 //更新进料状态
-                //st6.Fill = new SolidColorBrush(Colors.Yellow);
                 st6.Dispatcher.Invoke(new Action(() => { st6.Fill = new SolidColorBrush(Colors.Yellow); }));
             }
         }
@@ -1281,81 +1321,81 @@ namespace StackControl
         {
             try
             {
-                //tcClient.DeleteDeviceNotification(LeftLoadInt);
-                //tcClient.DeleteDeviceNotification(ReqLeftUPI);
-                //tcClient.DeleteDeviceNotification(RightLoadInt);
-                //tcClient.DeleteDeviceNotification(RightUPI);
+                tcClient.DeleteDeviceNotification(LeftLoadInt);
+                tcClient.DeleteDeviceNotification(ReqLeftUPI);
+                tcClient.DeleteDeviceNotification(RightLoadInt);
+                tcClient.DeleteDeviceNotification(RightUPI);
 
-                //tcClient.DeleteDeviceNotification(LeftPartInWork);
-                //tcClient.DeleteDeviceNotification(RightPartInWork);
-                //tcClient.DeleteDeviceNotification(LeftLoadReq);
-                //tcClient.DeleteDeviceNotification(RightLoadReq);
-                //tcClient.DeleteDeviceNotification(ConCh1Int);
-                //tcClient.DeleteDeviceNotification(ConCh2Int);
-                //tcClient.DeleteDeviceNotification(ConCh3Int);
-                //tcClient.DeleteDeviceNotification(ConCh4Int);
-                //tcClient.DeleteDeviceNotification(ConCh5Int);
-                //tcClient.DeleteDeviceNotification(PartDataReqInt);
-                //tcClient.DeleteDeviceNotification(CH1PartDataFBInt);
-                //tcClient.DeleteDeviceNotification(CH2PartDataFBInt);
-                //tcClient.DeleteDeviceNotification(CH3PartDataFBInt);
-                //tcClient.DeleteDeviceNotification(CH4PartDataFBInt);
-                //tcClient.DeleteDeviceNotification(CH5PartDataFBInt);
-                //tcClient.DeleteDeviceNotification(LeftScanDataReqInt);
-                //tcClient.DeleteDeviceNotification(RightScanDataReqInt);
+                tcClient.DeleteDeviceNotification(LeftPartInWork);
+                tcClient.DeleteDeviceNotification(RightPartInWork);
+                tcClient.DeleteDeviceNotification(LeftLoadReq);
+                tcClient.DeleteDeviceNotification(RightLoadReq);
+                tcClient.DeleteDeviceNotification(ConCh1Int);
+                tcClient.DeleteDeviceNotification(ConCh2Int);
+                tcClient.DeleteDeviceNotification(ConCh3Int);
+                tcClient.DeleteDeviceNotification(ConCh4Int);
+                tcClient.DeleteDeviceNotification(ConCh5Int);
+                tcClient.DeleteDeviceNotification(PartDataReqInt);
+                tcClient.DeleteDeviceNotification(CH1PartDataFBInt);
+                tcClient.DeleteDeviceNotification(CH2PartDataFBInt);
+                tcClient.DeleteDeviceNotification(CH3PartDataFBInt);
+                tcClient.DeleteDeviceNotification(CH4PartDataFBInt);
+                tcClient.DeleteDeviceNotification(CH5PartDataFBInt);
+                tcClient.DeleteDeviceNotification(LeftScanDataReqInt);
+                tcClient.DeleteDeviceNotification(RightScanDataReqInt);
 
-                //tcClient.DeleteVariableHandle(CH1PathFB);
-                //tcClient.DeleteVariableHandle(CH1BatchIDFB);
-                //tcClient.DeleteVariableHandle(CH2PathFB);
-                //tcClient.DeleteVariableHandle(CH2BatchIDFB);
-                //tcClient.DeleteVariableHandle(CH3PathFB);
-                //tcClient.DeleteVariableHandle(CH3BatchIDFB);
-                //tcClient.DeleteVariableHandle(CH4PathFB);
-                //tcClient.DeleteVariableHandle(CH4BatchIDFB);
-                //tcClient.DeleteVariableHandle(CH5PathFB);
-                //tcClient.DeleteVariableHandle(CH5BatchIDFB);
-                //tcClient.DeleteVariableHandle(leftUPI);
-                //tcClient.DeleteVariableHandle(RightUPI);
-                //tcClient.DeleteVariableHandle(LeftLoadRel);
-                //tcClient.DeleteVariableHandle(RightLoadRel);
-                //tcClient.DeleteDeviceNotification(PickPartFinishReqFB);
-                //tcClient.DeleteVariableHandle(NewBatchIDReady);
-                //tcClient.DeleteVariableHandle(NewBatchID);
-                //tcClient.DeleteVariableHandle(BatchID);
-                //tcClient.DeleteVariableHandle(Length);
-                //tcClient.DeleteVariableHandle(tWidth);
-                //tcClient.DeleteVariableHandle(Thinkness);
-                //tcClient.DeleteVariableHandle(Path);
-                //tcClient.DeleteVariableHandle(PathID);
-                //tcClient.DeleteVariableHandle(ChangeBatch);
-                //tcClient.DeleteVariableHandle(PickPartChannel);
+                tcClient.DeleteVariableHandle(CH1PartIDFB);
+                tcClient.DeleteVariableHandle(CH1BatchIDFB);
+                tcClient.DeleteVariableHandle(CH2PartIDFB);
+                tcClient.DeleteVariableHandle(CH2BatchIDFB);
+                tcClient.DeleteVariableHandle(CH3PartIDFB);
+                tcClient.DeleteVariableHandle(CH3BatchIDFB);
+                tcClient.DeleteVariableHandle(CH4PartIDFB);
+                tcClient.DeleteVariableHandle(CH4BatchIDFB);
+                tcClient.DeleteVariableHandle(CH5PartIDFB);
+                tcClient.DeleteVariableHandle(CH5BatchIDFB);
+                tcClient.DeleteVariableHandle(leftUPI);
+                tcClient.DeleteVariableHandle(RightUPI);
+                tcClient.DeleteVariableHandle(LeftLoadRel);
+                tcClient.DeleteVariableHandle(RightLoadRel);
+                tcClient.DeleteDeviceNotification(PickPartFinishReqFB);
+                tcClient.DeleteVariableHandle(NewBatchIDReady);
+                tcClient.DeleteVariableHandle(NewBatchID);
+                tcClient.DeleteVariableHandle(BatchID);
+                tcClient.DeleteVariableHandle(Length);
+                tcClient.DeleteVariableHandle(tWidth);
+                tcClient.DeleteVariableHandle(Thinkness);
+                tcClient.DeleteVariableHandle(Path);
+                tcClient.DeleteVariableHandle(PathID);
+                tcClient.DeleteVariableHandle(ChangeBatch);
+                tcClient.DeleteVariableHandle(PickPartChannel);
 
-                //tcClient.DeleteVariableHandle(HeatBeatInt);
-                //tcClient.DeleteVariableHandle(PartDataReq);
-                //tcClient.DeleteVariableHandle(CH1PartDataFBReset);
-                //tcClient.DeleteVariableHandle(CH2PartDataFBReset);
-                //tcClient.DeleteVariableHandle(CH3PartDataFBReset);
-                //tcClient.DeleteVariableHandle(CH4PartDataFBReset);
-                //tcClient.DeleteVariableHandle(CH5PartDataFBReset);
-                //tcClient.DeleteVariableHandle(PickPartFinishReqFB);
-                ////  tcClient.DeleteVariableHandle(PickPart_Channel);
+                tcClient.DeleteVariableHandle(HeatBeatInt);
+                tcClient.DeleteVariableHandle(PartDataReq);
+                tcClient.DeleteVariableHandle(CH1PartDataFBReset);
+                tcClient.DeleteVariableHandle(CH2PartDataFBReset);
+                tcClient.DeleteVariableHandle(CH3PartDataFBReset);
+                tcClient.DeleteVariableHandle(CH4PartDataFBReset);
+                tcClient.DeleteVariableHandle(CH5PartDataFBReset);
+                tcClient.DeleteVariableHandle(PickPartFinishReqFB);
+                //  tcClient.DeleteVariableHandle(PickPart_Channel);
 
-                //tcClient.DeleteVariableHandle(LeftRedLightFB);
-                //tcClient.DeleteVariableHandle(LeftGreenLightFB);
-                //tcClient.DeleteVariableHandle(LeftYellowLightFB);
+                tcClient.DeleteVariableHandle(LeftRedLightFB);
+                tcClient.DeleteVariableHandle(LeftGreenLightFB);
+                tcClient.DeleteVariableHandle(LeftYellowLightFB);
 
-                //tcClient.DeleteVariableHandle(RightRedLightFB);
-                //tcClient.DeleteVariableHandle(RightGreenLightFB);
-                //tcClient.DeleteVariableHandle(RightYellowLightFB);
+                tcClient.DeleteVariableHandle(RightRedLightFB);
+                tcClient.DeleteVariableHandle(RightGreenLightFB);
+                tcClient.DeleteVariableHandle(RightYellowLightFB);
 
-                //tcClient.DeleteDeviceNotification(CH1PatternOKFB);
-                //tcClient.DeleteDeviceNotification(CH2PatternOKFB);
-                //tcClient.DeleteDeviceNotification(CH3PatternOKFB);
-                //tcClient.DeleteDeviceNotification(CH4PatternOKFB);
-                //tcClient.DeleteDeviceNotification(CH5PatternOKFB);
+                tcClient.DeleteDeviceNotification(CH1PatternOKFB);
+                tcClient.DeleteDeviceNotification(CH2PatternOKFB);
+                tcClient.DeleteDeviceNotification(CH3PatternOKFB);
+                tcClient.DeleteDeviceNotification(CH4PatternOKFB);
+                tcClient.DeleteDeviceNotification(CH5PatternOKFB);
 
 
-                //tcClient.Dispose();
+                tcClient.Dispose();
                 Environment.Exit(0);
             }
             catch (AdsErrorException ex)
@@ -1429,8 +1469,21 @@ namespace StackControl
                         bool BasePlate = false;
                         int PickPart_Channel = Convert.ToInt32(tcClient.ReadAny(PickPartChannel, typeof(int)));
 
-                        //先看有没有《开始抓板》状态的 ，如果有，则取批次 如果没有，看有没有在《抓板区待抓板》的，按时间正序取最早一条，
-                        var PickingStack = Db.StackInfo_table.Where(s => s.Status == (int)StackStatus.整垛开始抓板).FirstOrDefault();
+                        var PickFinishStack = Db.StackInfo_table.FirstOrDefault(s => s.Status == (int)StackStatus.整垛抓板完成);
+
+                        if (PickFinishStack != null)
+                        {
+                            currentStackId = PickFinishStack.StackId;
+                            PickFinishStack.Status = (int)StackStatus.垫板抓取完成;
+                            Db.SaveChanges();
+
+                            tcClient.WriteAny(Path, (short)88);
+                            tcClient.WriteAny(PartDataReq, false);
+                            LogHandle.WriteLog_Info((int)LogMark.BasePlate, "currentStackId : " + currentStackId + " BasePlate PickCommand send sucess");
+                            return;
+                        }
+
+                        var PickingStack = Db.StackInfo_table.FirstOrDefault(s => s.Status == (int)StackStatus.整垛开始抓板);
 
                         if (PickingStack != null)
                         {
@@ -1442,7 +1495,7 @@ namespace StackControl
                         }
                         else
                         {
-                            var WaitPickStack = Db.StackInfo_table.Where(s => s.Status == (int)StackStatus.抓板区).OrderBy(s => s.StartTime).FirstOrDefault();
+                            var WaitPickStack = Db.StackInfo_table.OrderBy(s => s.StartTime).FirstOrDefault(s => s.Status == (int)StackStatus.抓板区);
 
                             if (WaitPickStack != null)
                             {
@@ -1465,49 +1518,54 @@ namespace StackControl
                             //Update CurrentBatch value
                             CurrentBatch = currentBatch;
 
-                            if (PickPart_Channel == 99)
-                            {
-                                SendData(About, currentBatch, currentStackId);
-                            }
-                            else if (PickPart_Channel == 1 || PickPart_Channel == 2)
-                            {
-                                //less than 40
-                                if (AmountStackNum < 40 && currentStackNum == AmountStackNum)
-                                {
-                                    //The last plate
-                                    BasePlate = true;
-                                }
-                                //else if (AmountStackNum > 40 && currentStackNum % 40 == 0 && currentStackNum > 0)
-                                //{
-                                //    //The last plate
-                                //    BasePlate = true;
-                                //}
-                                else if (currentStackNum == AmountStackNum)
-                                {
-                                    //The last plate
-                                    BasePlate = true;
-                                }
-                                else
-                                {
-                                    //The last plate
-                                    BasePlate = false;
-                                }
-                                //is the last plate
-                                if (BasePlate)
-                                {
-                                    tcClient.WriteAny(Path, (short)88);
-                                    tcClient.WriteAny(PartDataReq, false);
-                                }
-                                else
-                                    SendData(PickPart_Channel, currentBatch, currentStackId);
-                            }
+                            #region orgion
+                            //if (PickPart_Channel == 99)
+                            //{
+                            //    SendData(About, currentBatch, currentStackId);
+                            //}
+                            //else if (PickPart_Channel == 1 || PickPart_Channel == 2)
+                            //{
+                            #region /* orgion */ according by stackstatus(3)
+                            ////less than 40
+                            //if (AmountStackNum < 40 && currentStackNum == AmountStackNum)
+                            //{
+                            //    //The last plate
+                            //    BasePlate = true;
+                            //}
+                            ////else if (AmountStackNum > 40 && currentStackNum % 40 == 0 && currentStackNum > 0)
+                            ////{
+                            ////    //The last plate
+                            ////    BasePlate = true;
+                            ////}
+                            //else if (currentStackNum == AmountStackNum)
+                            //{
+                            //    //The last plate
+                            //    BasePlate = true;
+                            //}
+                            //else
+                            //{
+                            //    //The last plate
+                            //    BasePlate = false;
+                            //}
+                            ////is the last plate
+                            //if (BasePlate)
+                            //{
+                            //    tcClient.WriteAny(Path, (short)88);
+                            //    tcClient.WriteAny(PartDataReq, false);
+                            //}
+                            //else
+                            #endregion
+                            //}
+                            #endregion
+
+                            SendData(PickPart_Channel, currentBatch, currentStackId);
                         }
                         else
                         {
                             //there is dont have currentBatch , Close the request 
                             tcClient.WriteAny(PartDataReq, false);
                             Console.WriteLine("There is no board to pick！");
-                            LogHandle.WriteLog_Info((int)LogMark.抓板区, "There is no board to pick！");
+                            LogHandle.WriteLog_Info((int)LogMark.抓板, "There is no board to pick！");
                         }
                     }
 
@@ -1516,7 +1574,7 @@ namespace StackControl
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
-                    LogHandle.WriteLog_Info((int)LogMark.抓板区, ex.Message);
+                    LogHandle.WriteLog_Info((int)LogMark.抓板, ex.Message);
                 }
                 finally
                 {
@@ -1586,8 +1644,12 @@ namespace StackControl
 
                     if (BoardInfo == null)
                     {
+                        //无数据
+                        LogHandle.WriteLog_Info((int)LogMark.抓板, "SendDataToPlc : There is no Board to pick ");
                         return;
                     }
+
+                    var PartId = BoardInfo.PartID;
 
                     var map = BoardInfo.Map;
 
@@ -1600,9 +1662,8 @@ namespace StackControl
                     tcClient.WriteAny(tWidth, (short)Convert.ToInt16(BoardInfo.Width));
                     //板料厚度
                     tcClient.WriteAny(Thinkness, (short)Convert.ToInt16(BoardInfo.Thin));
-                    //
-                    tcClient.WriteAny(Path, (short)Convert.ToInt16(hps));
                     //路径分配编号                                                        
+                    tcClient.WriteAny(Path, (short)Convert.ToInt16(hps));
                     _PartID = Convert.ToInt16(BoardInfo.PartID);
                     //板料ID编号
                     tcClient.WriteAny(PathID, (short)_PartID);
@@ -1613,16 +1674,16 @@ namespace StackControl
                     //锯切图号
                     tcClient.WriteAny(Pattern, splitPattern, new int[] { 30 });
 
-                    Thread.Sleep(50);
+                    BoardInfo.Status = (int)StackStatus.单板开始抓板;
+                    BoardInfo.UpdateTime = DateTime.Now;
+
+                    Db.SaveChanges();
                     //清空请求
                     tcClient.WriteAny(PartDataReq, false);
 
-                    BoardInfo.Status = (int)StackStatus.单板开始抓板;
-
-                    Db.SaveChanges();
-
                     upe_Background(BoardInfo.Pos, (int)BoardInfo.Status, (int)BoardInfo.About);
 
+                    LogHandle.WriteLog_Info((int)LogMark.抓板, "Batch : " + Batch + ", StackId :" + StackId + ", PartId :" + PartId + ", HPS :" + hps);
                     #region StackIndo's Status update by trigger when the board picked finish 
                     //StackIndo's Status update by trigger when the board picked finish 
                     //var StackInfo_table = Db.StackInfo_table.Where(s => s.Batch == Batch && s.StackId == StackId && s.Status == (int)StackStatus.抓板区).FirstOrDefault();
@@ -1637,10 +1698,10 @@ namespace StackControl
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
+                LogHandle.WriteLog_Error((int)LogMark.抓板, "SendDataToPlc :" + ex.Message);
                 App.Current.Dispatcher.Invoke(() =>
                 {
                     Alarmlist.Add(new Alarm() { Message = ex.Message, Timestamp = DateTime.Now });
-
                 });
             }
         }
@@ -1685,13 +1746,11 @@ namespace StackControl
 
                     using (EDM Db = new EDM())
                     {
-
-                        //todo:PLC feedback board part id bug
-
                         //找到 stack_table 中 status = 2(开始抓板) Board 
                         var BoardInfo = Db.Stack_table.Where(s => s.Status == (int)StackStatus.单板开始抓板).OrderByDescending(s => s.Pos).FirstOrDefault();
                         if (BoardInfo == null)
                         {
+                            LogHandle.WriteLog_Info((int)LogMark.抓板, "There is no Board Status is 2");
                             return;
                         }
                         about = (int)BoardInfo.About;
@@ -1699,9 +1758,8 @@ namespace StackControl
                         string _StackID = BoardInfo.StackId;
                         string _BatchId = BoardInfo.Batch;
 
-                        //(int Pos, int About, int BatchSurplusCount1, int StackSurplusCount1) = SqlHelper.UpdateStatus2(currentBatch, _StackID, _PartID.ToString());
-
                         BoardInfo.Status = (int)StackStatus.单板抓板完成;
+                        BoardInfo.UpdateTime = DateTime.Now;
 
                         //后续修改为存储过程
                         var stackInfo_table = Db.StackInfo_table.FirstOrDefault(s => s.StackId == _StackID);
@@ -1712,11 +1770,11 @@ namespace StackControl
 
                         batchinfo_table.ComNum += 1;
 
+                        Db.SaveChanges();
+
                         tcClient.WriteAny(PickPartChannel, (short)0);
                         tcClient.WriteAny(PickPartFinishReqFB, false);
 
-                        Db.SaveChanges();
-                        
                         LogHandle.WriteLog_Info((int)LogMark.抓板, "RE Finish");
 
                         StackSurplusCount = stackInfo_table.PlateAmount - stackInfo_table.CurrentCount;
@@ -1736,6 +1794,7 @@ namespace StackControl
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.Message);
+                    LogHandle.WriteLog_Error((int)LogMark.抓板, "PickBoardFinishEvent :" + ex.Message); ;
                 }
                 finally
                 {
@@ -1880,7 +1939,7 @@ namespace StackControl
                         tcClient.WriteAny(plcPara_LoadReq, false);
 
                         /* Update ScanQrCode Status = 3 means OnLine */
-                        var ScanQRCodeInfo = Db.ScanQrCodeRecord.FirstOrDefault(s => s.StackId == StackInfo.StackId);
+                        var ScanQRCodeInfo = Db.ScanQrCodeRecord.OrderByDescending(s => s.ScanTime).FirstOrDefault(s => s.StackId == StackInfo.StackId);
                         ScanQRCodeInfo.Status = (int)ScanQRCodeStatus.上线完成;
 
                         Db.SaveChanges();
@@ -1945,9 +2004,12 @@ namespace StackControl
                     //置位PLC value
                     tcClient.WriteAny(PartInWork, false);
 
+                    var Up_Time = DateTime.Now;
+
                     stack_Table.ForEach(s =>
                     {
                         s.Status = (int)StackStatus.抓板区;
+                        s.UpdateTime = Up_Time;
                     });
 
                     var StackId = stack_Table[0].StackId;
@@ -2020,7 +2082,7 @@ namespace StackControl
                         PatternOKFB = CH1PatternOKFB;
                         PartDataFBReset = CH1PartDataFBReset;
                         textBlock = hps1;
-                        //BoardPartId = 1;
+                        BoardPartId = CH1PartIDFB;
                         break;
                     case 2:
                         BatchIDFB = CH2BatchIDFB;
@@ -2028,7 +2090,7 @@ namespace StackControl
                         PatternOKFB = CH2PatternOKFB;
                         PartDataFBReset = CH2PartDataFBReset;
                         textBlock = hps2;
-                        //BoardPartId = 2;
+                        BoardPartId = CH2PartIDFB;
                         break;
                     case 3:
                         BatchIDFB = CH3BatchIDFB;
@@ -2036,7 +2098,7 @@ namespace StackControl
                         PatternOKFB = CH3PatternOKFB;
                         PartDataFBReset = CH3PartDataFBReset;
                         textBlock = hps3;
-                        //BoardPartId = 3;
+                        BoardPartId = CH3PartIDFB;
                         break;
                     case 4:
                         BatchIDFB = CH4BatchIDFB;
@@ -2044,7 +2106,7 @@ namespace StackControl
                         PatternOKFB = CH4PatternOKFB;
                         PartDataFBReset = CH4PartDataFBReset;
                         textBlock = hps4;
-                        //BoardPartId = 4;
+                        BoardPartId = CH4PartIDFB;
                         break;
                     case 5:
                         BatchIDFB = CH5BatchIDFB;
@@ -2052,7 +2114,7 @@ namespace StackControl
                         PatternOKFB = CH5PatternOKFB;
                         PartDataFBReset = CH5PartDataFBReset;
                         textBlock = hps5;
-                        //BoardPartId = 5;
+                        BoardPartId = CH5PartIDFB;
                         break;
                     default:
                         break;
@@ -2060,7 +2122,7 @@ namespace StackControl
 
                 HPSPlateId = tcClient.ReadAny(BatchIDFB, typeof(string), new int[] { 30 }).ToString();//批次
                 _PatternFB = tcClient.ReadAny(PatternFB, typeof(string), new int[] { 30 }).ToString();//cut pic bmp
-                //_BoardPartId = Convert.ToInt32(tcClient.ReadAny(BoardPartId, typeof(int)));//大阪PartId
+                _BoardPartId = Convert.ToInt32(tcClient.ReadAny(BoardPartId, typeof(int)));//大阪PartId
 
                 if (SendActivateFileToHps(MachineNo, HPSPlateId, _PatternFB))
                 {
@@ -2083,6 +2145,7 @@ namespace StackControl
                     }
                 }
                 tcClient.WriteAny(PartDataFBReset, false);
+                LogHandle.WriteLog_Info((int)LogMark.锯切图, "HPSPlateId : " + HPSPlateId + "_PatternFB : " + _PatternFB + "_BoardPartId" + _BoardPartId);
             }
             catch (Exception ex)
             {
@@ -2091,7 +2154,6 @@ namespace StackControl
                 App.Current.Dispatcher.Invoke(() =>
                 {
                     Alarmlist.Add(new Alarm() { Message = ex.Message + "SendCutPic MachineNo : " + MachineNo, Timestamp = DateTime.Now });
-
                 });
             }
         }
@@ -2217,7 +2279,6 @@ namespace StackControl
                         RedLightFB = LeftRedLightFB;
                         GreenLightFB = LeftGreenLightFB;
                         YellowLightFB = LeftYellowLightFB;
-                        ReqUpi = ReqLeftUPI;
                         logMark = (int)LogMark.左侧下层扫码;
                         Data_Req = ReqLeftUPI;
                         break;
@@ -2226,14 +2287,14 @@ namespace StackControl
                         RedLightFB = RightRedLightFB;
                         GreenLightFB = RightGreenLightFB;
                         YellowLightFB = RightYellowLightFB;
-                        ReqUpi = ReqRightUPI;
                         logMark = (int)LogMark.右侧上层扫码;
                         Data_Req = ReqRightUPI;
                         break;
                 }
 
+                var Req = (bool)tcClient.ReadAny(Data_Req, typeof(bool));
 
-                if (!(bool)tcClient.ReadAny(Data_Req, typeof(bool)))
+                if (!Req)
                 {
                     return;
                 }
@@ -2323,12 +2384,25 @@ namespace StackControl
             }
             finally
             {
-                tcClient.WriteAny(ReqUpi, false);
+                tcClient.WriteAny(Data_Req, false);
             }
         }
         #endregion
 
         #endregion
 
+        private void TextBlock_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (MessageBox.Show("Run", "Cancel", MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
+            {
+                StartSystem();
+                this.SystemRun.Text = "RUNING !";
+                this.SystemRun.IsEnabled = false;
+            }
+            else
+            {
+
+            }
+        }
     }
 }

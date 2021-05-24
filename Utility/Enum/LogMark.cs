@@ -15,6 +15,8 @@ namespace Utility
         锯切图 = 4,
         左侧下层扫码 = 5,
         右侧上层扫码 = 6,
-        PLC订阅 = 7
+        PLC订阅 = 7,
+        View = 8,
+        BasePlate = 9
     }
 }
